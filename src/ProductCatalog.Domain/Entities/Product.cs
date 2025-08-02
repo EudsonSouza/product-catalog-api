@@ -28,14 +28,87 @@ public class Product
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Product name cannot be empty");
+        if (name.Length > 200)
+            throw new ArgumentException("Product name cannot exceed 200 characters");
             
-        Name = name;
+        Name = name.Trim();
         Slug = GenerateSlug(name);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDescription(string? description)
+    {
+        if (description?.Length > 1000)
+            throw new ArgumentException("Description cannot exceed 1000 characters");
+            
+        Description = description?.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetBasePrice(decimal? price)
+    {
+        if (price.HasValue && price.Value < 0)
+            throw new ArgumentException("Price cannot be negative");
+            
+        BasePrice = price;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Activate()
+    {
+        if (!CanBeActivated())
+            throw new InvalidOperationException("Product cannot be activated without available variants in stock");
+            
+        IsActive = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetFeatured(bool featured)
+    {
+        IsFeatured = featured;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public bool CanBeActivated()
     {
         return Variants.Any(v => v.IsAvailable && v.StockQuantity > 0);
+    }
+
+    public bool HasMainImage()
+    {
+        return Images.Any(i => i.IsMain);
+    }
+
+    public ProductImage? GetMainImage()
+    {
+        return Images.FirstOrDefault(i => i.IsMain);
+    }
+
+    public int GetTotalStock()
+    {
+        return Variants.Where(v => v.IsAvailable).Sum(v => v.StockQuantity);
+    }
+
+    public decimal? GetMinPrice()
+    {
+        var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
+        if (!availableVariants.Any()) return BasePrice;
+        
+        return availableVariants.Min(v => v.GetEffectivePrice());
+    }
+
+    public decimal? GetMaxPrice()
+    {
+        var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
+        if (!availableVariants.Any()) return BasePrice;
+        
+        return availableVariants.Max(v => v.GetEffectivePrice());
     }
 
     private static string GenerateSlug(string input)
@@ -55,12 +128,15 @@ public class Product
             }
         }
 
-        return stringBuilder
+        var slug = stringBuilder
             .ToString()
             .Normalize(NormalizationForm.FormC)
             .ToLowerInvariant()
             .Replace(" ", "-")
             .Replace("--", "-")
             .Trim('-');
+            
+        // Remove any remaining non-alphanumeric characters except hyphens
+        return string.Concat(slug.Where(c => char.IsLetterOrDigit(c) || c == '-'));
     }
 }
