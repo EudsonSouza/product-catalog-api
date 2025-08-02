@@ -1,6 +1,5 @@
 ﻿using FluentAssertions;
 using ProductCatalog.Domain.Entities;
-using ProductCatalog.Domain.Enums;
 
 namespace ProductCatalog.Tests.Unit.Domain;
 
