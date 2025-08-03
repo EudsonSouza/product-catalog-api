@@ -23,3 +23,6 @@ end_of_line = crlf
 
 [*.sh]
 end_of_line = lf
+
+[*Tests.cs]
+dotnet_diagnostic.CA1707.severity = none
