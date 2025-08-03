@@ -98,7 +98,7 @@ public class Product
     public decimal? GetMinPrice()
     {
         var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
-        if (!availableVariants.Any()) return BasePrice;
+        if (availableVariants.Count == 0) return BasePrice;
         
         return availableVariants.Min(v => v.GetEffectivePrice());
     }
@@ -106,7 +106,7 @@ public class Product
     public decimal? GetMaxPrice()
     {
         var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
-        if (!availableVariants.Any()) return BasePrice;
+        if (availableVariants.Count == 0) return BasePrice;
         
         return availableVariants.Max(v => v.GetEffectivePrice());
     }
