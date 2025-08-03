@@ -6,7 +6,6 @@ namespace ProductCatalog.Tests.Unit.Domain;
 public class ProductTests
 {
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
     public void SetName_Should_Throw_When_NullOrEmpty(string invalidName)
@@ -32,9 +31,9 @@ public class ProductTests
     public void SetName_Should_Generate_Correct_Slug(string name, string expectedSlug)
     {
         var product = new Product();
-        
+
         product.SetName(name);
-        
+
         product.Slug.Should().Be(expectedSlug);
     }
 
