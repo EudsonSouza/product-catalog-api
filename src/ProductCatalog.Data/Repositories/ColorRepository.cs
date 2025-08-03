@@ -19,6 +19,6 @@ public class ColorRepository : BaseRepository<Color>, IColorRepository
     public async Task<Color?> GetByNameAsync(string name)
     {
         return await DbSet
-            .FirstOrDefaultAsync(c => c.Name.ToLower() == name.ToLower());
+            .FirstOrDefaultAsync(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 }

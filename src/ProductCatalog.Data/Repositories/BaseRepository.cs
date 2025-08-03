@@ -5,13 +5,16 @@ namespace ProductCatalog.Data.Repositories;
 
 public class BaseRepository<T> : IRepository<T> where T : class
 {
-    protected readonly ProductCatalogDbContext Context;
-    protected readonly DbSet<T> DbSet;
+    private readonly ProductCatalogDbContext _context;
+    private readonly DbSet<T> _dbSet;
+    
+    protected ProductCatalogDbContext Context => _context;
+    protected DbSet<T> DbSet => _dbSet;
 
     protected BaseRepository(ProductCatalogDbContext context)
     {
-        Context = context;
-        DbSet = context.Set<T>();
+        _context = context;
+        _dbSet = context.Set<T>();
     }
 
     public virtual async Task<T?> GetByIdAsync(Guid id)

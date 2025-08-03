@@ -43,7 +43,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         var normalizedTerm = searchTerm.ToLower().Trim();
         
         return await DbSet
-            .Where(p => p.Name.ToLower().Contains(normalizedTerm) && p.IsActive)
+            .Where(p => p.Name.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase) && p.IsActive)
             .OrderBy(p => p.Name)
             .ToListAsync();
     }
