@@ -11,7 +11,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<ProductCatalogDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IColorRepository, ColorRepository>();
+builder.Services.AddScoped<ISizeRepository, SizeRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
 
