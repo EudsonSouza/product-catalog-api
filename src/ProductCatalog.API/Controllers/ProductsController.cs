@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ProductCatalog.Domain.Entities;
-using ProductCatalog.Domain.Enums;
+using ProductCatalog.Services.DTOs;
+using ProductCatalog.Services.Interfaces;
 
 namespace ProductCatalog.API.Controllers;
 
@@ -8,92 +8,54 @@ namespace ProductCatalog.API.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    [HttpGet]
-    public ActionResult<IEnumerable<Product>> GetProducts()
-    {
-        var products = new List<Product>
-        {
-            new Product
-            {
-                Id = Guid.NewGuid(),
-                Name = "Pijama Feminino Floral",
-                Description = "Pijama confortável com estampa floral",
-                Slug = "pijama-feminino-floral",
-                CategoryId = Guid.NewGuid(),
-                Gender = Gender.F,
-                BasePrice = 89.90m,
-                IsActive = true,
-                IsFeatured = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new Product
-            {
-                Id = Guid.NewGuid(),
-                Name = "Camiseta Masculina Básica",
-                Description = "Camiseta básica 100% algodão",
-                Slug = "camiseta-masculina-basica",
-                CategoryId = Guid.NewGuid(),
-                Gender = Gender.M,
-                BasePrice = 49.90m,
-                IsActive = true,
-                IsFeatured = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            }
-        };
+    private readonly IProductService _productService;
 
+    public ProductsController(IProductService productService)
+    {
+        _productService = productService;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts([FromQuery] ProductQueryDto query)
+    {
+        var products = await _productService.GetAllAsync(query);
         return Ok(products);
     }
 
     [HttpGet("{id:guid}")]
-    public ActionResult<Product> GetProduct(Guid id)
+    public async Task<ActionResult<ProductDto>> GetProduct(Guid id)
     {
-        var product = new Product
-        {
-            Id = id,
-            Name = "Produto Exemplo",
-            Description = "Descrição do produto exemplo",
-            Slug = "produto-exemplo",
-            CategoryId = Guid.NewGuid(),
-            Gender = Gender.Unisex,
-            BasePrice = 99.99m,
-            IsActive = true,
-            IsFeatured = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        var product = await _productService.GetByIdAsync(id);
+        if (product == null)
+            return NotFound();
 
         return Ok(product);
     }
 
     [HttpPost]
-    public ActionResult<Product> CreateProduct([FromBody] CreateProductRequest request)
+    public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] CreateProductDto request)
     {
-        var product = new Product
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Description = request.Description,
-            CategoryId = request.CategoryId,
-            Gender = request.Gender,
-            BasePrice = request.BasePrice,
-            IsActive = true,
-            IsFeatured = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        product.SetName(request.Name);
-
+        var product = await _productService.CreateAsync(request);
         return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
     }
-}
 
-public record CreateProductRequest(
-    string Name,
-    string? Description,
-    Guid CategoryId,
-    Gender Gender,
-    decimal? BasePrice
-);
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<ProductDto>> UpdateProduct(Guid id, [FromBody] UpdateProductDto request)
+    {
+        var product = await _productService.UpdateAsync(id, request);
+        if (product == null)
+            return NotFound();
+
+        return Ok(product);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult> DeleteProduct(Guid id)
+    {
+        var deleted = await _productService.DeleteAsync(id);
+        if (!deleted)
+            return NotFound();
+
+        return NoContent();
+    }
+}
