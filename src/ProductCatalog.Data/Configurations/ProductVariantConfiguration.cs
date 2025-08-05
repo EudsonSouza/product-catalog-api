@@ -35,7 +35,8 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
             .IsRequired();
 
         builder.Property(v => v.SKU)
-            .HasMaxLength(50);
+            .HasMaxLength(50)
+            .HasColumnName("sku");
 
         builder.Property(v => v.Price)
             .HasColumnType("decimal(10,2)");
