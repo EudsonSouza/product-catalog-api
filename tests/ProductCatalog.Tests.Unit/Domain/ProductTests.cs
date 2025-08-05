@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+﻿using AwesomeAssertions;
 using ProductCatalog.Domain.Entities;
 
 namespace ProductCatalog.Tests.Unit.Domain;
