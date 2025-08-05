@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using ProductCatalog.Data;
 using ProductCatalog.Data.Repositories;
 using ProductCatalog.Domain.Interfaces;
+using ProductCatalog.Services;
+using ProductCatalog.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,8 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IColorRepository, ColorRepository>();
 builder.Services.AddScoped<ISizeRepository, SizeRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();
 
