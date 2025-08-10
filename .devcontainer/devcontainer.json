@@ -1,0 +1,30 @@
+{
+  "name": "ProductCatalog .NET 9 + PostgreSQL",
+  //"dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  //"shutdownAction": "stopCompose",
+  "features": {
+    "ghcr.io/dotnet/aspire-devcontainer-feature/dotnetaspire:1": {
+      "version": "9.0"
+    }
+  },
+  "forwardPorts": [
+    5000,
+    5432
+  ],
+  "postCreateCommand": "dotnet tool install --global dotnet-ef && dotnet restore",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "editorconfig.editorconfig",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "terminal.integrated.shell.linux": "/bin/bash"
+      }
+    }
+  }
+}
