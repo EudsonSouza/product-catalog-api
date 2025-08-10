@@ -2,17 +2,51 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
-    container_name: productcatalog-postgres
+    image: postgres:17-alpine
+    container_name: product-catalog-db
     environment:
-      POSTGRES_DB: productcatalog
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - product-catalog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: product-catalog-api
+    environment:
+      DB_HOST: postgres
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: 5432
+      LOG_LEVEL_DEFAULT: ${LOG_LEVEL_DEFAULT}
+      LOG_LEVEL_ASPNETCORE: ${LOG_LEVEL_ASPNETCORE}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - product-catalog-network
     restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  product-catalog-network:
+    driver: bridge
