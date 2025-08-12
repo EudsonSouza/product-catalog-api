@@ -1,15 +1,15 @@
-version: '3.8'
+name: product-catalog
 
 services:
   postgres:
     image: postgres:17-alpine
     container_name: product-catalog-db
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_USER: "${DB_USERNAME}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
     ports:
-      - "${DB_PORT}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -26,17 +26,20 @@ services:
       dockerfile: Dockerfile
     container_name: product-catalog-api
     environment:
-      DB_HOST: postgres
-      DB_NAME: ${DB_NAME}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_PORT: 5432
-      LOG_LEVEL_DEFAULT: ${LOG_LEVEL_DEFAULT}
-      LOG_LEVEL_ASPNETCORE: ${LOG_LEVEL_ASPNETCORE}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      ASPNETCORE_ENVIRONMENT: Development
+      DB_HOST: "postgres"
+      DB_NAME: "${DB_NAME}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_PORT: "5432"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=${DB_NAME};Username=${DB_USERNAME};Password=${DB_PASSWORD};Port=5432"
+
+      Logging__LogLevel__Default: "${LOG_LEVEL_DEFAULT:-Information}"
+      Logging__LogLevel__Microsoft.AspNetCore: "${LOG_LEVEL_ASPNETCORE:-Warning}"
+      AllowedHosts: "*"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
     ports:
-      - "8080:8080"
+      - "5080:8080"
     depends_on:
       postgres:
         condition: service_healthy
