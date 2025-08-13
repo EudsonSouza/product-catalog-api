@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ProductCatalog.API.Health;
 using ProductCatalog.Data;
+using ProductCatalog.Data.Helpers;
 using ProductCatalog.Data.Repositories;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
@@ -12,11 +13,19 @@ using ProductCatalog.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// ---- Services
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                        ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
+                        ?? builder.Configuration["DATABASE_URL"];
+
+var connectionString = DatabaseConnectionHelper.ConvertToNpgsqlConnectionString(rawConnectionString);
+
 builder.Services.AddDbContext<ProductCatalogDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -90,7 +99,7 @@ app.MapControllers();
 
 app.Run();
 
-#pragma warning disable CA1052 // (type is static holder used by top-level Program)
+#pragma warning disable CA1052
 internal static class HealthStatics
 {
     public static readonly string[] LiveTags = new[] { "live" };

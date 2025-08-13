@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductCatalog.Data;
+using ProductCatalog.Data.Helpers;
+
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(cfg =>
@@ -11,13 +13,15 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((ctx, services) =>
     {
-        var cs =
-            ctx.Configuration.GetConnectionString("DefaultConnection")
-         ?? ctx.Configuration.GetConnectionString("Default")
-         ?? ctx.Configuration["ConnectionStrings__DefaultConnection"]
-         ?? throw new InvalidOperationException("Connection string not found.");
+        var rawConnectionString = ctx.Configuration.GetConnectionString("DefaultConnection")
+                                ?? ctx.Configuration.GetConnectionString("Default")
+                                ?? ctx.Configuration["ConnectionStrings__DefaultConnection"]
+                                ?? ctx.Configuration["DATABASE_URL"]
+                                ?? throw new InvalidOperationException("Connection string not found.");
 
-        services.AddDbContext<ProductCatalogDbContext>(o => o.UseNpgsql(cs));
+        var connectionString = DatabaseConnectionHelper.ConvertToNpgsqlConnectionString(rawConnectionString);
+
+        services.AddDbContext<ProductCatalogDbContext>(options => options.UseNpgsql(connectionString));
     })
     .Build();
 
