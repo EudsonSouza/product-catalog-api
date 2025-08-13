@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ProductCatalog.API.Health;
 using ProductCatalog.Data;
+using ProductCatalog.Data.Helpers;
 using ProductCatalog.Data.Repositories;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
@@ -12,64 +13,19 @@ using ProductCatalog.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- Helper: normalize Postgres URL to key=value for Npgsql
-static string NormalizePgConnection(string? raw)
-{
-    if (string.IsNullOrWhiteSpace(raw))
-        throw new InvalidOperationException("Connection string not found.");
-
-    // Already key=value?
-    if (raw.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
-        raw.Contains("Server=", StringComparison.OrdinalIgnoreCase))
-        return raw;
-
-    // URL form?
-    if (raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
-        raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
-    {
-        var url = raw.Replace("postgresql://", "postgres://", StringComparison.OrdinalIgnoreCase);
-        var uri = new Uri(url);
-
-        var userInfo = uri.UserInfo.Split(':', 2);
-        var username = Uri.UnescapeDataString(userInfo[0]);
-        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-        var host = uri.Host;
-        var port = uri.IsDefaultPort ? 5432 : uri.Port;
-        var database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
-
-        // parse ?sslmode=... (very small parser; no external deps)
-        string sslmode = "Require";
-        if (!string.IsNullOrEmpty(uri.Query))
-        {
-            foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var kv = pair.Split('=', 2);
-                if (kv.Length == 2 && kv[0].Equals("sslmode", StringComparison.OrdinalIgnoreCase))
-                {
-                    sslmode = Uri.UnescapeDataString(kv[1]);
-                }
-            }
-        }
-
-        return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode={sslmode};Trust Server Certificate=true";
-    }
-
-    throw new ArgumentException("Unsupported connection string format.");
-}
 
 // ---- Services
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// Prefer ConnectionStrings:DefaultConnection; fallback to DATABASE_URL (Render)
-var rawCs = builder.Configuration.GetConnectionString("DefaultConnection")
-           ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
-           ?? builder.Configuration["DATABASE_URL"];
+var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                        ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
+                        ?? builder.Configuration["DATABASE_URL"];
 
-var cs = NormalizePgConnection(rawCs);
+var connectionString = DatabaseConnectionHelper.ConvertToNpgsqlConnectionString(rawConnectionString);
 
 builder.Services.AddDbContext<ProductCatalogDbContext>(options =>
-    options.UseNpgsql(cs));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
