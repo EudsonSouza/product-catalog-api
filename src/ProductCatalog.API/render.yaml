@@ -1,0 +1,19 @@
+databases:
+  - name: product-catalog-db
+    plan: free
+    region: virginia
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: product-catalog-api
+    runtime: docker
+    region: virginia
+    plan: free
+    healthCheckPath: /health/ready
+    preDeployCommand: "dotnet /app/migrator/ProductCatalog.Migrator.dll"
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: product-catalog-db
+          property: connectionString
