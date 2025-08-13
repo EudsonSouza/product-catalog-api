@@ -11,7 +11,6 @@ services:
     region: virginia
     plan: free
     healthCheckPath: /health/ready
-    preDeployCommand: "dotnet /app/migrator/ProductCatalog.Migrator.dll"
     envVars:
       - key: ConnectionStrings__DefaultConnection
         fromDatabase:
