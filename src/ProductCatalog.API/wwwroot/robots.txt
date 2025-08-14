@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /swagger
+Disallow: /swagger/
+Disallow: /_vs/
+Disallow: /_framework/
+Allow: /health/

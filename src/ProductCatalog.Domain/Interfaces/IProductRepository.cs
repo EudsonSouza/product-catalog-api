@@ -12,5 +12,5 @@ public interface IProductRepository : IRepository<Product>
     Task<bool> ExistsBySlugAsync(string slug);
     Task<Product?> GetWithVariantsAsync(Guid id);
     Task<Product?> GetWithImagesAsync(Guid id);
-    Task<Product?> GetCompleteAsync(Guid id); // Com variants, images, category
+    Task<Product?> GetCompleteAsync(Guid id);
 }
