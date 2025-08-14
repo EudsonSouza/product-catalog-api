@@ -19,16 +19,44 @@ public class ProductCatalogDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         ApplyEntityConfigurations(modelBuilder);
         ConfigureNamingConventions(modelBuilder);
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+{
+    NormalizeDateTimesToUtc();
+    return await base.SaveChangesAsync(cancellationToken);
+}
+
+public override int SaveChanges()
+{
+    NormalizeDateTimesToUtc();
+    return base.SaveChanges();
+}
+
+private void NormalizeDateTimesToUtc()
+{
+    var entries = ChangeTracker.Entries()
+        .Where(e => e.State is EntityState.Added or EntityState.Modified);
+
+    foreach (var e in entries)
     {
-        UpdateTimestamps();
-        return await base.SaveChangesAsync(cancellationToken);
+        var props = e.Properties
+            .Where(p => p.Metadata.ClrType == typeof(DateTime) && p.CurrentValue is DateTime);
+
+        foreach (var p in props)
+        {
+            var dt = (DateTime)p.CurrentValue!;
+            if (dt.Kind == DateTimeKind.Unspecified)
+                p.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            else if (dt.Kind == DateTimeKind.Local)
+                p.CurrentValue = dt.ToUniversalTime();
+        }
     }
+}
+
 
     private static void ApplyEntityConfigurations(ModelBuilder modelBuilder)
     {
@@ -60,20 +88,4 @@ public class ProductCatalogDbContext : DbContext
         }
     }
 
-    private void UpdateTimestamps()
-    {
-        var entries = ChangeTracker.Entries()
-            .Where(e => e.State is EntityState.Added or EntityState.Modified);
-
-        var now = DateTime.UtcNow;
-
-        foreach (var entry in entries)
-        {
-            if (entry.State == EntityState.Added && entry.Property("CreatedAt").CurrentValue == null)
-                entry.Property("CreatedAt").CurrentValue = now;
-
-            if (entry.Property("UpdatedAt") != null)
-                entry.Property("UpdatedAt").CurrentValue = now;
-        }
-    }
-}
+   }

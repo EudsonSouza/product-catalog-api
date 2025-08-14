@@ -27,6 +27,11 @@ var host = Host.CreateDefaultBuilder(args)
 
 using var scope = host.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<ProductCatalogDbContext>();
-Console.WriteLine("Applying EF Core migrations...");
+
+Console.WriteLine("🔄 Applying EF Core migrations...");
 await db.Database.MigrateAsync();
-Console.WriteLine("EF Core migrations applied successfully.");
+Console.WriteLine("✅ EF Core migrations applied successfully.");
+
+Console.WriteLine("🌱 Starting database seed...");
+await ProductCatalog.Data.Seed.ProductCatalogSeeder.SeedAsync(db);
+Console.WriteLine("🎉 Database setup completed!");
