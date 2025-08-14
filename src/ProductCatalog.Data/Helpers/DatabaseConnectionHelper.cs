@@ -11,11 +11,13 @@ public static class DatabaseConnectionHelper
     {
         ValidateConnectionString(rawConnectionString);
         
-        if (IsAlreadyNpgsqlFormat(rawConnectionString))
-            return rawConnectionString;
+        var connectionString = rawConnectionString!; // Already validated as not null
+        
+        if (IsAlreadyNpgsqlFormat(connectionString))
+            return connectionString;
             
-        if (IsPostgreSqlUrl(rawConnectionString))
-            return ConvertUrlToConnectionString(rawConnectionString);
+        if (IsPostgreSqlUrl(connectionString))
+            return ConvertUrlToConnectionString(connectionString);
             
         throw new ArgumentException("Connection string must be either Npgsql format or PostgreSQL URL format.");
     }
