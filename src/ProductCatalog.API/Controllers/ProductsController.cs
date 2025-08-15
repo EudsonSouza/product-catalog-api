@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductCatalog.Services.DTOs;
 using ProductCatalog.Services.Interfaces;
@@ -16,6 +17,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ProductDto>), 200)]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts([FromQuery] ProductQueryDto query)
     {
         var products = await _productService.GetAllAsync(query);
@@ -33,6 +35,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] CreateProductDto request)
     {
         var product = await _productService.CreateAsync(request);
@@ -40,6 +43,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<ActionResult<ProductDto>> UpdateProduct(Guid id, [FromBody] UpdateProductDto request)
     {
         var product = await _productService.UpdateAsync(id, request);
@@ -50,6 +54,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "RequireAdmin")]
     public async Task<ActionResult> DeleteProduct(Guid id)
     {
         var deleted = await _productService.DeleteAsync(id);

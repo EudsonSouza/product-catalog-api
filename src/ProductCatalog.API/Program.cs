@@ -14,9 +14,22 @@ using ProductCatalog.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 
-// ---- Services
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info.Description = "Product Catalog API - GET endpoints are public, POST/PUT/DELETE require admin authorization";
+        return Task.CompletedTask;
+    });
+});
 
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                         ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
@@ -34,15 +47,28 @@ builder.Services.AddScoped<ISizeRepository, SizeRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("RequireAdmin", policy =>
+        policy.RequireClaim("role", "admin"));
+
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: HealthStatics.LiveTags)
     .AddCheck<DbHealthCheck>("database", tags: HealthStatics.ReadyTags);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+
+var enableSwagger = builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", app.Environment.IsDevelopment());
+
+if (enableSwagger)
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Product Catalog API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "Product Catalog API - Read Only Demo";
+    });
 }
 
 //app.UseHttpsRedirection();
@@ -55,15 +81,12 @@ static Task WriteJsonResponse(HttpContext context, HealthReport report)
     {
         status = report.Status.ToString(),
         timestamp = DateTime.UtcNow,
-        version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0",
         totalDuration = $"{report.TotalDuration.TotalMilliseconds}ms",
         checks = report.Entries.Select(kvp => new
         {
             name = kvp.Key,
             status = kvp.Value.Status.ToString(),
-            duration = $"{kvp.Value.Duration.TotalMilliseconds}ms",
-            description = kvp.Value.Description,
-            data = kvp.Value.Data
+            duration = $"{kvp.Value.Duration.TotalMilliseconds}ms"
         })
     };
 
@@ -81,6 +104,15 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
         [HealthStatus.Degraded] = StatusCodes.Status200OK,
         [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
     }
+}).WithOpenApi(operation =>
+{
+    operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
+    {
+        new() { Name = "Health" }
+    };
+    operation.Summary = "Liveness health check";
+    operation.Description = "Returns the application liveness status";
+    return operation;
 });
 
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
@@ -93,6 +125,15 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
         [HealthStatus.Degraded] = StatusCodes.Status200OK,
         [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
     }
+}).WithOpenApi(operation =>
+{
+    operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
+    {
+        new() { Name = "Health" }
+    };
+    operation.Summary = "Readiness health check";
+    operation.Description = "Returns the application readiness status including database connectivity";
+    return operation;
 });
 
 app.MapControllers();
