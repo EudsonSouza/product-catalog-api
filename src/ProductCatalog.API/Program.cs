@@ -10,16 +10,23 @@ using ProductCatalog.Data.Repositories;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
 using ProductCatalog.Services.Interfaces;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 builder.Services.AddControllers();
-
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
 });
 
 builder.Services.AddOpenApi(options =>
@@ -57,7 +64,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-
 var enableSwagger = builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", app.Environment.IsDevelopment());
 
 if (enableSwagger)
@@ -71,7 +77,10 @@ if (enableSwagger)
     });
 }
 
-//app.UseHttpsRedirection();
+// IMPORTANT: apply forwarded headers BEFORE https redirection/auth/etc.
+app.UseForwardedHeaders();
+
+app.UseHttpsRedirection();
 
 static Task WriteJsonResponse(HttpContext context, HealthReport report)
 {
