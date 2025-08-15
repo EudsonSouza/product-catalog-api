@@ -4,6 +4,12 @@
 
 REST API for managing product catalogs with variants.
 
+## 🚀 Live Demo
+
+📖 **API Documentation**: https://product-catalog-api-1t6o.onrender.com/swagger/index.html
+
+*Note: GET endpoints are public for demo purposes. POST/PUT/DELETE operations require admin authorization.*
+
 ## What it does
 
 Product catalog system for clothing e-commerce. Manages products with multiple variants (color/size combinations), categories, and inventory tracking.
