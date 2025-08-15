@@ -16,3 +16,5 @@ services:
         fromDatabase:
           name: product-catalog-db
           property: connectionString
+      - key: ENABLE_SWAGGER
+        value: "true"
