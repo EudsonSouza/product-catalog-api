@@ -1,6 +1,8 @@
 # Product Catalog API
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-purple)](https://dotnet.microsoft.com/)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/EudsonSouza/8cdc218770b5707458a6c377a1612355/raw/coverage.json)](./docs/03-Development/Coverage.md)
+[![Tests](https://github.com/EudsonSouza/product-catalog-api/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/EudsonSouza/product-catalog-api/actions/workflows/test-coverage.yml)
 
 REST API for managing product catalogs with variants.
 

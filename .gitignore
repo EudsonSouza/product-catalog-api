@@ -20,6 +20,8 @@ out/
 TestResults/
 *.trx
 coverage/
+coverage-report/
+*.cobertura.xml
 
 # Logs
 *.log
