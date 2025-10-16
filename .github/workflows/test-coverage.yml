@@ -1,0 +1,90 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ProductCatalog.sln
+
+    - name: Build
+      run: dotnet build ProductCatalog.sln --configuration Release --no-restore
+
+    - name: Run tests with coverage
+      run: dotnet test ProductCatalog.sln --configuration Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
+
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+    - name: Generate coverage report
+      run: reportgenerator "-reports:tests/**/coverage.cobertura.xml" "-targetdir:coverage-report" "-reporttypes:Cobertura;TextSummary"
+
+    - name: Extract coverage percentage
+      id: coverage
+      run: |
+        COVERAGE=$(grep -oP 'Line coverage: \K[\d.]+' coverage-report/Summary.txt)
+        echo "Coverage: $COVERAGE%"
+        echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+
+    - name: Determine badge color
+      id: badge-color
+      run: |
+        COVERAGE=${{ steps.coverage.outputs.percentage }}
+        if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+          echo "color=brightgreen" >> $GITHUB_OUTPUT
+        elif (( $(echo "$COVERAGE >= 50" | bc -l) )); then
+          echo "color=yellow" >> $GITHUB_OUTPUT
+        else
+          echo "color=red" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Update coverage badge
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 8cdc218770b5707458a6c377a1612355
+        filename: coverage.json
+        label: Coverage
+        message: ${{ steps.coverage.outputs.percentage }}%
+        color: ${{ steps.badge-color.outputs.color }}
+        namedLogo: .NET
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const coverage = '${{ steps.coverage.outputs.percentage }}';
+          const color = '${{ steps.badge-color.outputs.color }}';
+          const emoji = color === 'brightgreen' ? '✅' : color === 'yellow' ? '⚠️' : '❌';
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `${emoji} **Test Coverage Report**\n\nLine Coverage: **${coverage}%**\n\n${color === 'brightgreen' ? '✅ Excellent coverage!' : color === 'yellow' ? '⚠️ Coverage needs improvement' : '❌ Coverage is too low'}`
+          })
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-report/
+        retention-days: 30
