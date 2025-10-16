@@ -22,5 +22,5 @@ This document describes the database schema, entity relationships, and data mode
 
 ## Related
 
-- [Clean Architecture](./CleanArchitecture.md)
+- [N-Layered Architecture](./LayeredArchitecture.md)
 - [System Diagram](./SystemDiagram.md)

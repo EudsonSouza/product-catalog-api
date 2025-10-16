@@ -46,12 +46,12 @@ This document illustrates the high-level system architecture, showing how differ
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│                 Application Layer                            │
+│                 Services Layer                               │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  Services / Use Cases                                │   │
+│  │  Application Services                                │   │
 │  │  - ProductService                                    │   │
 │  │  - CategoryService                                   │   │
-│  │  - InventoryService                                  │   │
+│  │  - VariantService                                    │   │
 │  └─────────────────────────────────────────────────────┘   │
 └────────────────────────┬────────────────────────────────────┘
                          │
@@ -115,12 +115,12 @@ This document illustrates the high-level system architecture, showing how differ
   - CORS policy enforcement
   - Error handling middleware
 
-### Application Layer
+### Services Layer
 - **Responsibilities**:
   - Use case orchestration
   - Business workflow coordination
-  - DTO mapping
-  - Service-level validation
+  - Service-level business logic
+  - Coordination between domain and data layers
 
 ### Domain Layer
 - **Responsibilities**:
@@ -152,11 +152,11 @@ This document illustrates the high-level system architecture, showing how differ
 ```
 1. Client (Frontend) → HTTP GET Request
 2. API Controller → Receives request
-3. Application Service → Processes business logic
+3. Service → Processes business logic
 4. Repository → Queries database via EF Core
 5. PostgreSQL → Returns data
 6. EF Core → Maps to domain entities
-7. Application Service → Maps to DTOs
+7. API Controller → Maps to DTOs
 8. API Controller → Returns JSON response
 9. Client → Renders products
 ```
@@ -165,14 +165,14 @@ This document illustrates the high-level system architecture, showing how differ
 
 ```
 1. Client → HTTP POST Request with product data
-2. API Controller → Validates input
-3. Application Service → Creates domain entity
+2. API Controller → Validates input and maps to domain entity
+3. Service → Coordinates business logic
 4. Domain Entity → Validates business rules
 5. Unit of Work → Begins transaction
 6. Repository → Adds entity to context
 7. Unit of Work → Commits transaction
 8. EF Core → Persists to PostgreSQL
-9. API Controller → Returns 201 Created
+9. API Controller → Returns 201 Created with DTO
 10. Client → Updates UI
 ```
 
@@ -252,7 +252,7 @@ This document illustrates the high-level system architecture, showing how differ
 
 ## Related Documentation
 
-- [Clean Architecture](./CleanArchitecture.md)
+- [N-Layered Architecture](./LayeredArchitecture.md)
 - [Data Model](./DataModel.md)
 - [API Endpoints](../02-API/Endpoints.md)
 - [Deployment Guide](./Deployment.md)

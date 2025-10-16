@@ -9,8 +9,8 @@ To empower small business owners, like my mother, to efficiently manage their re
 ### 1. Professional Software Development
 
 **Demonstrate industry-standard practices:**
-- Clean Architecture and Domain-Driven Design principles
-- SOLID principles and design patterns
+- N-Layered Architecture with clear separation of concerns
+- SOLID principles and design patterns (Repository, Unit of Work)
 - Test-Driven Development (TDD) approach
 - Comprehensive documentation and API contracts
 - Continuous integration and deployment readiness
@@ -122,8 +122,8 @@ To empower small business owners, like my mother, to efficiently manage their re
 
 This project aligns with modern software engineering practices:
 
-- **Clean Architecture**: Robert C. Martin's principles
-- **Domain-Driven Design**: Eric Evans' tactical patterns
+- **N-Layered Architecture**: Traditional layered architecture pattern
+- **Repository Pattern**: Martin Fowler's data access abstraction
 - **RESTful API Design**: Roy Fielding's architectural style
 - **Test Pyramid**: Balance of unit, integration, and E2E tests
 - **Continuous Delivery**: Always production-ready code
@@ -150,5 +150,5 @@ This backend API serves as a demonstration of professional software development 
 
 **Related Documentation**:
 - [Architecture Decision Log](./ArchitectureDecisionLog.md)
-- [Clean Architecture Guide](../01-Architecture/CleanArchitecture.md)
+- [N-Layered Architecture Guide](../01-Architecture/LayeredArchitecture.md)
 - [Roadmap](../04-Governance/Roadmap.md)

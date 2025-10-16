@@ -1,29 +1,28 @@
-# Clean Architecture
+# N-Layered Architecture
 
-> _This document explains the Clean Architecture implementation in the Product Catalog API._
+> _This document explains the N-Layered Architecture implementation in the Product Catalog API._
 
 ---
-last_updated: 2025-10-15
-source: created
+last_updated: 2025-10-16
+source: updated
 ---
 
 ## Purpose
 
-This document describes how Clean Architecture principles are applied in the Product Catalog API, detailing the responsibilities of each layer and the dependency rules that govern them.
+This document describes how N-Layered Architecture principles are applied in the Product Catalog API, detailing the responsibilities of each layer and the dependency rules that govern them.
 
-## Clean Architecture Principles
+## N-Layered Architecture Principles
 
-The Product Catalog API follows Clean Architecture (also known as Onion Architecture or Hexagonal Architecture) with these core principles:
+The Product Catalog API follows N-Layered Architecture (also known as Traditional Layered Architecture) with these core principles:
 
-1. **Independence of Frameworks**: Business logic doesn't depend on external frameworks
-2. **Testability**: Business logic can be tested without UI, database, or external services
-3. **Independence of UI**: The UI can change without affecting business logic
-4. **Independence of Database**: Business logic is not bound to a specific database
-5. **Independence of External Agencies**: Business logic doesn't know about external services
+1. **Separation of Concerns**: Each layer has a specific responsibility
+2. **Dependency Flow**: Upper layers depend on lower layers
+3. **Testability**: Business logic can be tested with proper mocking
+4. **Maintainability**: Clear structure makes code easy to understand and modify
 
 ## Dependency Rule
 
-**Dependencies point inward**: Outer layers can depend on inner layers, but inner layers cannot depend on outer layers.
+**Dependencies flow downward**: Upper layers can depend on lower layers.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -32,18 +31,18 @@ The Product Catalog API follows Clean Architecture (also known as Onion Architec
 └──────────────┬──────────────────────────┘
                │ depends on
 ┌──────────────▼──────────────────────────┐
-│      Application Layer                   │  ← Use Cases
-│  (Services, Interfaces)                  │
+│      Services Layer                      │  ← Application Logic
+│  (Services, Business Rules)              │
 └──────────────┬──────────────────────────┘
                │ depends on
 ┌──────────────▼──────────────────────────┐
 │         Domain Layer                     │  ← Entities
-│  (Entities, Value Objects, Rules)       │  ← (No dependencies)
+│  (Entities, Value Objects)               │
 └──────────────▲──────────────────────────┘
                │ depends on
 ┌──────────────┴──────────────────────────┐
-│      Infrastructure Layer                │  ← External
-│  (EF Core, Repositories, Services)      │
+│         Data Layer                       │  ← Data Access
+│  (EF Core, Repositories, DbContext)     │
 └─────────────────────────────────────────┘
 ```
 
@@ -55,9 +54,9 @@ The Product Catalog API follows Clean Architecture (also known as Onion Architec
 
 **Responsibilities**:
 - Define business entities (Product, Category, Variant)
-- Encapsulate business rules and validation
+- Encapsulate basic business rules and validation
 - Define repository interfaces (no implementation)
-- Contain value objects and domain events
+- Contain value objects
 
 **Dependencies**: None (pure C# classes)
 
@@ -99,18 +98,18 @@ public class Product : BaseEntity
 }
 ```
 
-### 2. Application Layer
+### 2. Services Layer
 
-**Location**: `src/ProductCatalog.Application/`
+**Location**: `src/ProductCatalog.Services/`
 
 **Responsibilities**:
-- Define application services and use cases
+- Implement application services and business logic
 - Orchestrate domain objects to perform tasks
 - Define DTOs for data transfer
 - Handle application-level validation
 - Map between domain entities and DTOs
 
-**Dependencies**: Domain Layer only
+**Dependencies**: Domain Layer and Data Layer
 
 **Key Components**:
 ```csharp
@@ -144,7 +143,7 @@ public class ProductService
 }
 ```
 
-### 3. Infrastructure Layer
+### 3. Data Layer
 
 **Location**: `src/ProductCatalog.Data/`
 
@@ -153,7 +152,7 @@ public class ProductService
 - Configure Entity Framework Core
 - Implement database context
 - Handle data persistence concerns
-- Implement external service integrations
+- Manage database migrations
 
 **Dependencies**: Domain Layer (implements interfaces)
 
@@ -203,7 +202,7 @@ public class ProductRepository : IProductRepository
 - API documentation (Swagger)
 - Dependency injection configuration
 
-**Dependencies**: Application Layer and Infrastructure Layer
+**Dependencies**: Services Layer and Data Layer
 
 **Key Components**:
 ```csharp
@@ -246,7 +245,7 @@ public class ProductsController : ControllerBase
 ProductCatalog.sln
 │
 ├── src/
-│   ├── ProductCatalog.Domain/           # Core business logic
+│   ├── ProductCatalog.Domain/           # Core business entities
 │   │   ├── Entities/
 │   │   │   ├── Product.cs
 │   │   │   ├── Category.cs
@@ -256,7 +255,7 @@ ProductCatalog.sln
 │   │   │   └── IUnitOfWork.cs
 │   │   └── Exceptions/
 │   │
-│   ├── ProductCatalog.Application/      # Use cases & services
+│   ├── ProductCatalog.Services/        # Application services
 │   │   ├── Services/
 │   │   │   └── ProductService.cs
 │   │   ├── DTOs/
@@ -264,7 +263,7 @@ ProductCatalog.sln
 │   │   │   └── CreateProductDto.cs
 │   │   └── Mapping/
 │   │
-│   ├── ProductCatalog.Data/             # Data access
+│   ├── ProductCatalog.Data/            # Data access
 │   │   ├── Context/
 │   │   │   └── ApplicationDbContext.cs
 │   │   ├── Repositories/
@@ -273,40 +272,42 @@ ProductCatalog.sln
 │   │   ├── Configurations/
 │   │   └── Migrations/
 │   │
-│   └── ProductCatalog.API/              # Web API
-│       ├── Controllers/
-│       │   └── ProductsController.cs
-│       ├── Middleware/
-│       ├── Extensions/
-│       └── Program.cs
+│   ├── ProductCatalog.API/             # Web API
+│   │   ├── Controllers/
+│   │   │   └── ProductsController.cs
+│   │   ├── Middleware/
+│   │   ├── Extensions/
+│   │   └── Program.cs
+│   │
+│   └── ProductCatalog.Migrator/        # Database migration utility
 │
 └── tests/
     ├── ProductCatalog.Domain.Tests/
-    ├── ProductCatalog.Application.Tests/
+    ├── ProductCatalog.Services.Tests/
     └── ProductCatalog.API.Tests/
 ```
 
 ## Benefits of This Architecture
 
-### 1. Testability
+### 1. Simplicity
+- Straightforward layer hierarchy
+- Easy to understand for developers
+- Clear dependency flow
+
+### 2. Testability
 - Domain logic can be tested without database
-- Application services can be tested with mock repositories
+- Services can be tested with mock repositories
 - API controllers can be tested with mock services
 
-### 2. Maintainability
+### 3. Maintainability
 - Clear separation of concerns
 - Easy to locate and modify code
-- Changes in one layer don't affect others
+- Well-organized project structure
 
-### 3. Flexibility
-- Can swap database (e.g., PostgreSQL → SQL Server)
-- Can change API framework (e.g., ASP.NET → NancyFx)
-- Can add new use cases without modifying existing code
-
-### 4. Scalability
-- Layers can be deployed independently
+### 4. Flexibility
+- Can swap database implementations
+- Can modify business logic without affecting presentation
 - Easy to add new features
-- Support for microservices migration
 
 ## Dependency Injection
 
@@ -326,25 +327,50 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 Each layer has its own test project:
 
 - **Domain.Tests**: Test business logic and domain rules
-- **Application.Tests**: Test services with mock repositories
+- **Services.Tests**: Test services with mock repositories
 - **API.Tests**: Integration tests for endpoints
+
+## N-Layered vs Clean Architecture
+
+**Why N-Layered instead of Clean Architecture?**
+
+This project uses N-Layered Architecture, which differs from Clean Architecture in these key ways:
+
+| Aspect | N-Layered | Clean Architecture |
+|--------|-----------|-------------------|
+| **Layers** | API → Services → Domain → Data | API → Application → Domain ← Infrastructure |
+| **Dependencies** | Downward flow | Inward flow (Dependency Inversion) |
+| **Services Layer** | Can depend on Data Layer | Application depends only on Domain |
+| **Infrastructure** | Data layer is at bottom | Infrastructure depends on Domain |
+| **Complexity** | Simpler, more direct | More complex, stricter rules |
+
+**When to use N-Layered:**
+- Small to medium projects
+- Teams familiar with traditional layering
+- When simplicity is preferred over strict separation
+
+**When to use Clean Architecture:**
+- Large, complex systems
+- Need for strict independence from frameworks
+- Multiple data sources or external services
+- Microservices architecture
 
 ## Anti-Patterns to Avoid
 
-1. **Domain depending on Infrastructure**: Never reference EF Core in domain entities
+1. **Domain depending on Data**: Never reference EF Core in domain entities
 2. **Anemic Domain Model**: Domain entities should contain business logic, not just properties
-3. **Service Locator**: Use dependency injection, not service locator pattern
-4. **Leaky Abstractions**: Repository interfaces should not expose EF Core types
+3. **Fat Services**: Don't put all logic in services; use domain entities
+4. **Circular Dependencies**: Avoid layers depending on upper layers
 
 ## Related Documentation
 
 - [System Diagram](./SystemDiagram.md)
 - [Data Model](./DataModel.md)
-- [Development Setup](../03-Development/EnvironmentSetup.md)
-- [Testing Guide](../03-Development/Testing.md)
+- [Development Setup](../03-Development/Setup.md)
+- [Testing Guide](../03-Development/Tests.md)
 
 ## Further Reading
 
+- [N-Layered Architecture Pattern](https://docs.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures)
 - [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-- [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
-- [Onion Architecture](https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/)
+- [Repository Pattern](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
