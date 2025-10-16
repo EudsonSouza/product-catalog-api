@@ -24,9 +24,9 @@ Each architectural decision record (ADR) follows this structure:
 
 ---
 
-## ADR-001: Clean Architecture Pattern
+## ADR-001: N-Layered Architecture Pattern
 
-**Decision**: Adopt Clean Architecture with layered structure (Domain, Application, Infrastructure, API)
+**Decision**: Adopt N-Layered Architecture with traditional layered structure (API, Services, Domain, Data)
 
 **Status**: Accepted
 
@@ -35,17 +35,19 @@ Each architectural decision record (ADR) follows this structure:
 **Context**:
 
 -   Need for maintainable and testable codebase
--   Requirement to support multiple data sources in the future
--   Team familiarity with layered architectures
+-   Preference for simplicity over strict architectural rules
+-   Team familiarity with traditional layered architectures
 -   Portfolio project demonstrating professional practices
+-   Small to medium-sized project scope
 
 **Consequences**:
 
--   **Positive**: Clear separation of concerns, high testability, independence from frameworks
--   **Positive**: Business logic isolated in Domain layer
--   **Positive**: Easy to swap infrastructure components
--   **Negative**: Initial setup complexity
--   **Negative**: More files and abstractions
+-   **Positive**: Clear separation of concerns, straightforward to understand
+-   **Positive**: Business logic organized in Services and Domain layers
+-   **Positive**: Simpler than Clean Architecture, easier to implement
+-   **Positive**: Good balance between structure and flexibility
+-   **Negative**: Less strict dependency rules than Clean Architecture
+-   **Trade-off**: Services layer can depend on Data layer (more direct but less flexible)
 
 ---
 
@@ -290,7 +292,7 @@ The following decisions are pending or will be documented as they are made:
 ## Related Documentation
 
 -   [Vision and Objectives](./Vision.md)
--   [Clean Architecture Guide](../01-Architecture/CleanArchitecture.md)
+-   [N-Layered Architecture Guide](../01-Architecture/LayeredArchitecture.md)
 -   [Development Roadmap](../04-Governance/Roadmap.md)
 
 ## Notes

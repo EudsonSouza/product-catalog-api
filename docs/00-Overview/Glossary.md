@@ -48,8 +48,8 @@ A design pattern that abstracts data access logic and provides a collection-like
 ### Unit of Work
 A pattern that maintains a list of objects affected by a business transaction and coordinates the writing out of changes.
 
-### Clean Architecture
-An architectural pattern that separates concerns into layers (Domain, Application, Infrastructure, API) with dependencies pointing inward.
+### N-Layered Architecture
+A traditional architectural pattern that organizes code into horizontal layers (API, Services, Domain, Data) with dependencies flowing downward.
 
 ### Domain-Driven Design (DDD)
 An approach to software development that emphasizes collaboration between technical and domain experts to create a model of the business domain.
@@ -109,7 +109,7 @@ A testing framework for .NET applications.
 ## Related Documentation
 
 - [Vision and Objectives](./Vision.md)
-- [Architecture Overview](../01-Architecture/CleanArchitecture.md)
+- [Architecture Overview](../01-Architecture/LayeredArchitecture.md)
 - [API Endpoints](../02-API/Endpoints.md)
 
 ## Notes

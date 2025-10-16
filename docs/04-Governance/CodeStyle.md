@@ -24,5 +24,5 @@ This document defines coding standards and style guidelines for the Product Cata
 
 ## Related
 
-- [Clean Architecture](../01-Architecture/CleanArchitecture.md)
+- [N-Layered Architecture](../01-Architecture/LayeredArchitecture.md)
 - [Contributing](./Contributing.md)

@@ -43,9 +43,9 @@ Product catalog system for clothing e-commerce. Manages products with multiple v
 - DTO mappings
 
 ✅ **Architecture**
-- Layered architecture structure
+- N-Layered architecture (API → Services → Domain → Data)
 - Dependency injection
-- Separated concerns
+- Repository pattern with Unit of Work
 - Unit and integration test setup
 
 ## Next Features

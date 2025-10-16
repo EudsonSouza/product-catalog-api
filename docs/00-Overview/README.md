@@ -18,12 +18,12 @@ This API was originally developed to support a small lingerie and pajamas store,
 - **RESTful API**: Clean and consistent REST endpoints with proper HTTP semantics
 
 ### Technical Highlights
-- **Clean Architecture**: Layered architecture with clear separation of concerns
-- **Domain-Driven Design**: Rich domain models with business logic encapsulation
+- **N-Layered Architecture**: Traditional layered architecture with clear separation of concerns
 - **Repository Pattern**: Abstracted data access with Unit of Work implementation
 - **Entity Framework Core**: Modern ORM with PostgreSQL database support
 - **API Documentation**: Interactive Swagger/OpenAPI documentation
 - **Testing**: Comprehensive unit and integration test suite with xUnit
+- **Rich Domain Models**: Business logic encapsulation in domain entities
 
 ## Live Demo
 
@@ -66,16 +66,17 @@ The API will be available at `https://localhost:7242`.
 
 ## Architecture Overview
 
-The application follows a layered architecture pattern:
+The application follows an N-Layered architecture pattern:
 
 ```
 ProductCatalog.API       → API Layer (Controllers, DTOs, Swagger)
-ProductCatalog.Application → Application Layer (Services, Use Cases)
-ProductCatalog.Domain    → Domain Layer (Entities, Business Logic)
+ProductCatalog.Services  → Services Layer (Business Logic, DTOs)
+ProductCatalog.Domain    → Domain Layer (Entities, Interfaces)
 ProductCatalog.Data      → Data Layer (EF Core, Repositories)
+ProductCatalog.Migrator  → Database Migration Tool
 ```
 
-For detailed architecture information, see [Clean Architecture](../01-Architecture/CleanArchitecture.md).
+For detailed architecture information, see [N-Layered Architecture](../01-Architecture/LayeredArchitecture.md).
 
 ## Related Documentation
 
