@@ -9,10 +9,19 @@ using Npgsql;
 
 namespace ProductCatalog.Data.Seed;
 
-public static class ProductCatalogSeeder
+public static partial class ProductCatalogSeeder
 {
     private static volatile bool _isRunning;
     private const string SeedLockKey = "product_catalog.seed.v1";
+
+    [GeneratedRegex(@"&")]
+    private static partial Regex AmpersandRegex();
+
+    [GeneratedRegex(@"[^a-z0-9]+")]
+    private static partial Regex NonAlphanumericRegex();
+
+    [GeneratedRegex(@"-+")]
+    private static partial Regex MultipleHyphensRegex();
 
     public static async Task SeedAsync(ProductCatalogDbContext context)
     {
@@ -238,9 +247,9 @@ DO UPDATE SET
         var noAccents = sb.ToString().Normalize(NormalizationForm.FormC);
 
         var slug = noAccents.Trim().ToLowerInvariant();
-        slug = Regex.Replace(slug, @"&", " and ");
-        slug = Regex.Replace(slug, @"[^a-z0-9]+", "-");
-        slug = Regex.Replace(slug, @"-+", "-").Trim('-');
+        slug = AmpersandRegex().Replace(slug, " and ");
+        slug = NonAlphanumericRegex().Replace(slug, "-");
+        slug = MultipleHyphensRegex().Replace(slug, "-").Trim('-');
         return slug;
     }
 }
