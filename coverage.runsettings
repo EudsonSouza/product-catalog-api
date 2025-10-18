@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>
+            [*.Tests]*
+            [ProductCatalog.Data]ProductCatalog.Data.Migrations.*
+            [ProductCatalog.Data]ProductCatalog.Data.Seed.*
+            [ProductCatalog.Data]ProductCatalog.Data.Helpers.DatabaseConnectionHelper
+            [ProductCatalog.Data]System.Text.RegularExpressions.Generated.*
+          </Exclude>
+          <ExcludeByFile>
+            **/Migrations/**
+            **/Seed/**
+            **/obj/**
+            **/Helpers/DatabaseConnectionHelper.cs
+            **/*Designer.cs
+          </ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
