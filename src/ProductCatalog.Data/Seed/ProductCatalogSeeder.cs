@@ -6,9 +6,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Data;
 using Npgsql;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ProductCatalog.Data.Seed;
 
+[ExcludeFromCodeCoverage]
 public static partial class ProductCatalogSeeder
 {
     private static volatile bool _isRunning;
