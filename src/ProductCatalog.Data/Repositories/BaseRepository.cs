@@ -7,7 +7,7 @@ public class BaseRepository<T> : IRepository<T> where T : class
 {
     private readonly ProductCatalogDbContext _context;
     private readonly DbSet<T> _dbSet;
-    
+
     protected ProductCatalogDbContext Context => _context;
     protected DbSet<T> DbSet => _dbSet;
 

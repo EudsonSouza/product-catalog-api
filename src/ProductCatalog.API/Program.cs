@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ProductCatalog.API.Health;
@@ -10,7 +11,6 @@ using ProductCatalog.Data.Repositories;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
 using ProductCatalog.Services.Interfaces;
-using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 

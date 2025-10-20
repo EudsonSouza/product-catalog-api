@@ -1,4 +1,4 @@
-﻿namespace ProductCatalog.Domain.Interfaces;
+namespace ProductCatalog.Domain.Interfaces;
 
 public interface IRepository<T> where T : class
 {
