@@ -8,7 +8,7 @@ public class Color
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     // Navigation Properties
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
 }
