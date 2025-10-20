@@ -8,18 +8,29 @@ namespace ProductCatalog.Tests.Unit.Builders;
 /// </summary>
 public class ProductBuilder
 {
+    // Static cache to ensure same category instances are reused across products
+    private static readonly Dictionary<Guid, Category> _categoryCache = new();
+
+    /// <summary>
+    /// Clears the category cache. Call this between tests to avoid entity tracking conflicts.
+    /// </summary>
+    public static void ClearCache()
+    {
+        _categoryCache.Clear();
+    }
+
     private Guid _id = Guid.NewGuid();
     private string _name = "Test Product";
     private string? _description = "Test product description";
     private string _slug = "test-product";
-    private Guid _categoryId = Guid.NewGuid();
+    private readonly List<Guid> _categoryIds = new();
     private Gender _gender = Gender.Unisex;
     private decimal? _basePrice = 99.99m;
     private bool _isActive = true;
     private bool _isFeatured;
     private DateTime _createdAt = DateTime.UtcNow;
     private DateTime _updatedAt = DateTime.UtcNow;
-    private Category? _category;
+    private readonly List<Category> _categories = new();
     private List<ProductVariant> _variants = new();
     private List<ProductImage> _images = new();
 
@@ -50,7 +61,7 @@ public class ProductBuilder
 
     public ProductBuilder WithCategoryId(Guid categoryId)
     {
-        _categoryId = categoryId;
+        _categoryIds.Add(categoryId);
         return this;
     }
 
@@ -92,8 +103,7 @@ public class ProductBuilder
 
     public ProductBuilder WithCategory(Category category)
     {
-        _category = category;
-        _categoryId = category.Id;
+        _categories.Add(category);
         return this;
     }
 
@@ -129,7 +139,6 @@ public class ProductBuilder
             Name = _name,
             Description = _description,
             Slug = _slug,
-            CategoryId = _categoryId,
             Gender = _gender,
             BasePrice = _basePrice,
             IsActive = _isActive,
@@ -140,9 +149,38 @@ public class ProductBuilder
             Images = _images
         };
 
-        if (_category != null)
+        // Compose categories from provided ids and category objects
+        var cats = new List<Category>();
+        cats.AddRange(_categories);
+        foreach (var id in _categoryIds)
         {
-            product.Category = _category;
+            if (!cats.Any(c => c.Id == id))
+            {
+                // Use cached category instance to avoid duplicate key errors in EF
+                if (!_categoryCache.TryGetValue(id, out Category? value))
+                {
+                    value = new Category
+                    {
+                        Id = id,
+                        Name = $"Category-{id.ToString()[..8]}",
+                        Slug = $"category-{id.ToString()[..8]}",
+                        Gender = Gender.Unisex
+                    };
+                    _categoryCache[id] = value;
+                }
+                cats.Add(value);
+            }
+        }
+        foreach (var c in cats)
+        {
+            if (!product.Categories.Contains(c))
+            {
+                product.Categories.Add(c);
+            }
+            if (!c.Products.Contains(product))
+            {
+                c.Products.Add(product);
+            }
         }
 
         // Set ProductId on variants

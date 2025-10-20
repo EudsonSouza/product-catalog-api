@@ -16,14 +16,17 @@ public class ProductServiceTests : IDisposable
 {
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IProductRepository> _mockProductRepo;
+    private readonly Mock<ICategoryRepository> _mockCategoryRepo;
     private readonly ProductService _sut; // System Under Test
 
     public ProductServiceTests()
     {
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockProductRepo = new Mock<IProductRepository>();
+        _mockCategoryRepo = new Mock<ICategoryRepository>();
 
         _mockUnitOfWork.Setup(u => u.Products).Returns(_mockProductRepo.Object);
+        _mockUnitOfWork.Setup(u => u.Categories).Returns(_mockCategoryRepo.Object);
 
         _sut = new ProductService(_mockUnitOfWork.Object);
     }
@@ -45,7 +48,7 @@ public class ProductServiceTests : IDisposable
         product.Id = productId;
 
         _mockProductRepo
-            .Setup(r => r.GetByIdAsync(productId))
+            .Setup(r => r.GetCompleteAsync(productId))
             .ReturnsAsync(product);
 
         // Act
@@ -57,7 +60,7 @@ public class ProductServiceTests : IDisposable
         Assert.Equal(product.Name, result.Name);
         Assert.Equal(product.Description, result.Description);
         Assert.Equal(product.Slug, result.Slug);
-        _mockProductRepo.Verify(r => r.GetByIdAsync(productId), Times.Once);
+        _mockProductRepo.Verify(r => r.GetCompleteAsync(productId), Times.Once);
     }
 
     [Fact]
@@ -66,7 +69,7 @@ public class ProductServiceTests : IDisposable
         // Arrange
         var productId = Guid.NewGuid();
         _mockProductRepo
-            .Setup(r => r.GetByIdAsync(productId))
+            .Setup(r => r.GetCompleteAsync(productId))
             .ReturnsAsync((Product?)null);
 
         // Act
@@ -74,7 +77,7 @@ public class ProductServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
-        _mockProductRepo.Verify(r => r.GetByIdAsync(productId), Times.Once);
+        _mockProductRepo.Verify(r => r.GetCompleteAsync(productId), Times.Once);
     }
 
     #endregion
@@ -184,7 +187,7 @@ public class ProductServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal(categoryId, result.First().CategoryId);
+        Assert.Contains(categoryId, result.First().CategoryIds);
     }
 
     [Fact]
@@ -360,13 +363,21 @@ public class ProductServiceTests : IDisposable
     public async Task CreateAsync_CreatesProduct_WithValidData()
     {
         // Arrange
+        var categoryId = Guid.NewGuid();
+        var category = TestDataFactory.CreateCategory();
+        category.Id = categoryId;
+
         var dto = new CreateProductDto(
             "New Product",
             "Product Description",
-            Guid.NewGuid(),
+            new List<Guid> { categoryId },
             Gender.Unisex,
             49.99m
         );
+
+        _mockCategoryRepo
+            .Setup(r => r.GetByIdAsync(categoryId))
+            .ReturnsAsync(category);
 
         _mockProductRepo
             .Setup(r => r.AddAsync(It.IsAny<Product>()))
@@ -383,7 +394,7 @@ public class ProductServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(dto.Name, result.Name);
         Assert.Equal(dto.Description, result.Description);
-        Assert.Equal(dto.CategoryId, result.CategoryId);
+        Assert.True(result.CategoryIds.SequenceEqual(dto.CategoryIds));
         Assert.Equal(dto.Gender, result.Gender);
         Assert.Equal(dto.BasePrice, result.BasePrice);
         Assert.True(result.IsActive);
@@ -401,7 +412,7 @@ public class ProductServiceTests : IDisposable
         var dto = new CreateProductDto(
             "Test Product Name",
             null,
-            Guid.NewGuid(),
+            new List<Guid> { Guid.NewGuid() },
             Gender.Unisex,
             29.99m
         );
@@ -432,7 +443,7 @@ public class ProductServiceTests : IDisposable
         var dto = new CreateProductDto(
             "New Product",
             null,
-            Guid.NewGuid(),
+            new List<Guid> { Guid.NewGuid() },
             Gender.Unisex,
             29.99m
         );
@@ -462,7 +473,7 @@ public class ProductServiceTests : IDisposable
         var dto = new CreateProductDto(
             "New Product",
             null,
-            Guid.NewGuid(),
+            new List<Guid> { Guid.NewGuid() },
             Gender.Unisex,
             29.99m
         );
@@ -502,10 +513,14 @@ public class ProductServiceTests : IDisposable
             .Build();
         existingProduct.Variants.Add(variant);
 
+        var categoryId = Guid.NewGuid();
+        var category = TestDataFactory.CreateCategory();
+        category.Id = categoryId;
+
         var dto = new UpdateProductDto(
             "New Name",
             "New Description",
-            Guid.NewGuid(),
+            new List<Guid> { categoryId },
             Gender.M,
             99.99m,
             true,
@@ -515,6 +530,10 @@ public class ProductServiceTests : IDisposable
         _mockProductRepo
             .Setup(r => r.GetByIdAsync(productId))
             .ReturnsAsync(existingProduct);
+
+        _mockCategoryRepo
+            .Setup(r => r.GetByIdAsync(categoryId))
+            .ReturnsAsync(category);
 
         _mockProductRepo
             .Setup(r => r.UpdateAsync(It.IsAny<Product>()))
@@ -531,7 +550,7 @@ public class ProductServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(dto.Name, result.Name);
         Assert.Equal(dto.Description, result.Description);
-        Assert.Equal(dto.CategoryId, result.CategoryId);
+        Assert.True(result.CategoryIds.SequenceEqual(dto.CategoryIds!));
         Assert.Equal(dto.Gender, result.Gender);
         Assert.Equal(dto.BasePrice, result.BasePrice);
         Assert.Equal(dto.IsActive, result.IsActive);

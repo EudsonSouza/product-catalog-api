@@ -17,7 +17,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     public async Task<IEnumerable<Product>> GetByCategoryAsync(Guid categoryId)
     {
         return await DbSet
-            .Where(p => p.CategoryId == categoryId && p.IsActive)
+            .Where(p => p.IsActive && p.Categories.Any(c => c.Id == categoryId))
             .OrderBy(p => p.Name)
             .ToListAsync();
     }
@@ -41,7 +41,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     public async Task<IEnumerable<Product>> SearchByNameAsync(string searchTerm)
     {
         var normalizedTerm = searchTerm.ToLower().Trim();
-        
+
         return await DbSet
             .Where(p => p.Name.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase) && p.IsActive)
             .OrderBy(p => p.Name)
@@ -74,7 +74,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     public async Task<Product?> GetCompleteAsync(Guid id)
     {
         return await DbSet
-            .Include(p => p.Category)
+            .Include(p => p.Categories)
             .Include(p => p.Variants)
                 .ThenInclude(v => v.Color)
             .Include(p => p.Variants)

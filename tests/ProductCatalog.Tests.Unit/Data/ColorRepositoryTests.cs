@@ -16,6 +16,10 @@ public class ColorRepositoryTests : IClassFixture<DatabaseFixture>
     {
         _fixture = fixture;
         _repository = new ColorRepository(_fixture.Context);
+
+        // Clear caches and change tracker to avoid conflicts between tests
+        ProductBuilder.ClearCache();
+        _fixture.ClearChangeTracker();
     }
 
     [Fact]
