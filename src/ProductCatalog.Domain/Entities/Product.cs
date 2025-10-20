@@ -1,6 +1,6 @@
-using ProductCatalog.Domain.Enums;
-using System.Text;
 using System.Globalization;
+using System.Text;
+using ProductCatalog.Domain.Enums;
 
 namespace ProductCatalog.Domain.Entities;
 
@@ -10,16 +10,15 @@ public class Product
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string Slug { get; set; } = string.Empty;
-    public Guid CategoryId { get; set; }
     public Gender Gender { get; set; }
     public decimal? BasePrice { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsFeatured { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     // Navigation Properties
-    public Category Category { get; set; } = null!;
+    public ICollection<Category> Categories { get; set; } = new List<Category>();
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
     public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
 
@@ -30,7 +29,7 @@ public class Product
             throw new ArgumentException("Product name cannot be empty");
         if (name.Length > 200)
             throw new ArgumentException("Product name cannot exceed 200 characters");
-            
+
         Name = name.Trim();
         Slug = GenerateSlug(name);
         UpdatedAt = DateTime.UtcNow;
@@ -40,7 +39,7 @@ public class Product
     {
         if (description?.Length > 1000)
             throw new ArgumentException("Description cannot exceed 1000 characters");
-            
+
         Description = description?.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
@@ -49,7 +48,7 @@ public class Product
     {
         if (price.HasValue && price.Value < 0)
             throw new ArgumentException("Price cannot be negative");
-            
+
         BasePrice = price;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -58,7 +57,7 @@ public class Product
     {
         if (!CanBeActivated())
             throw new InvalidOperationException("Product cannot be activated without available variants in stock");
-            
+
         IsActive = true;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -95,11 +94,36 @@ public class Product
         return Variants.Where(v => v.IsAvailable).Sum(v => v.StockQuantity);
     }
 
+    public void AddCategory(Category category)
+    {
+        ArgumentNullException.ThrowIfNull(category);
+        if (!Categories.Contains(category))
+        {
+            Categories.Add(category);
+        }
+        if (!category.Products.Contains(this))
+        {
+            category.Products.Add(this);
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveCategory(Category category)
+    {
+        ArgumentNullException.ThrowIfNull(category);
+        Categories.Remove(category);
+        if (category.Products.Contains(this))
+        {
+            category.Products.Remove(this);
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public decimal? GetMinPrice()
     {
         var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
         if (availableVariants.Count == 0) return BasePrice;
-        
+
         return availableVariants.Min(v => v.GetEffectivePrice());
     }
 
@@ -107,7 +131,7 @@ public class Product
     {
         var availableVariants = Variants.Where(v => v.IsAvailable).ToList();
         if (availableVariants.Count == 0) return BasePrice;
-        
+
         return availableVariants.Max(v => v.GetEffectivePrice());
     }
 
@@ -135,7 +159,7 @@ public class Product
             .Replace(" ", "-")
             .Replace("--", "-")
             .Trim('-');
-            
+
         // Remove any remaining non-alphanumeric characters except hyphens
         return string.Concat(slug.Where(c => char.IsLetterOrDigit(c) || c == '-'));
     }
