@@ -44,6 +44,8 @@ public class CategoryTests
     {
         // Arrange
         var category = TestDataFactory.CreateCategory();
+
+        // Act
         var product1 = new ProductBuilder()
             .WithName("Product 1")
             .WithCategory(category)
@@ -52,10 +54,6 @@ public class CategoryTests
             .WithName("Product 2")
             .WithCategory(category)
             .Build();
-
-        // Act
-        category.Products.Add(product1);
-        category.Products.Add(product2);
 
         // Assert
         Assert.Equal(2, category.Products.Count);

@@ -18,6 +18,10 @@ public class CategoryRepositoryTests : IClassFixture<DatabaseFixture>
     {
         _fixture = fixture;
         _repository = new CategoryRepository(_fixture.Context);
+
+        // Clear caches and change tracker to avoid conflicts between tests
+        ProductBuilder.ClearCache();
+        _fixture.ClearChangeTracker();
     }
 
     [Fact]
@@ -221,13 +225,19 @@ public class CategoryRepositoryTests : IClassFixture<DatabaseFixture>
         await _repository.AddAsync(category);
         await _fixture.Context.SaveChangesAsync();
 
+        // Clear change tracker to detach the category
+        _fixture.ClearChangeTracker();
+
+        // Retrieve the category again to have a tracked instance
+        var trackedCategory = await _repository.GetByIdAsync(uniqueCategoryId);
+
         var activeProduct = new ProductBuilder()
-            .WithCategoryId(uniqueCategoryId)
+            .WithCategory(trackedCategory!)
             .WithIsActive(true)
             .WithName($"Active-{Guid.NewGuid()}")
             .Build();
         var inactiveProduct = new ProductBuilder()
-            .WithCategoryId(uniqueCategoryId)
+            .WithCategory(trackedCategory!)
             .WithIsActive(false)
             .WithName($"Inactive-{Guid.NewGuid()}")
             .Build();

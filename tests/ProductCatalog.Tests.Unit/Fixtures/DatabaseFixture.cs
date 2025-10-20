@@ -10,6 +10,7 @@ namespace ProductCatalog.Tests.Unit.Fixtures;
 public class DatabaseFixture : IDisposable
 {
     private readonly string _databaseName;
+    private readonly DbContextOptions<ProductCatalogDbContext> _options;
     public ProductCatalogDbContext Context { get; private set; }
 
     public DatabaseFixture()
@@ -17,13 +18,30 @@ public class DatabaseFixture : IDisposable
         // Create unique database name for each test class instance
         _databaseName = $"TestDb_{Guid.NewGuid()}";
 
-        var options = new DbContextOptionsBuilder<ProductCatalogDbContext>()
+        _options = new DbContextOptionsBuilder<ProductCatalogDbContext>()
             .UseInMemoryDatabase(databaseName: _databaseName)
             .EnableSensitiveDataLogging()
             .Options;
 
-        Context = new ProductCatalogDbContext(options);
+        Context = new ProductCatalogDbContext(_options);
         Context.Database.EnsureCreated();
+    }
+
+    /// <summary>
+    /// Clears the change tracker to avoid entity tracking conflicts between tests
+    /// </summary>
+    public void ClearChangeTracker()
+    {
+        Context.ChangeTracker.Clear();
+    }
+
+    /// <summary>
+    /// Recreates the context to ensure a clean state
+    /// </summary>
+    public void RecreateContext()
+    {
+        Context.Dispose();
+        Context = new ProductCatalogDbContext(_options);
     }
 
     public void Dispose()

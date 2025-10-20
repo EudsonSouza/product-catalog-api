@@ -19,6 +19,10 @@ public class ProductRepositoryTests : IClassFixture<DatabaseFixture>
     {
         _fixture = fixture;
         _repository = new ProductRepository(_fixture.Context);
+
+        // Clear caches and change tracker to avoid conflicts between tests
+        ProductBuilder.ClearCache();
+        _fixture.ClearChangeTracker();
     }
 
     #region Base Repository Tests
@@ -396,7 +400,7 @@ public class ProductRepositoryTests : IClassFixture<DatabaseFixture>
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.Category);
+        Assert.NotEmpty(result.Categories);
         Assert.NotEmpty(result.Variants);
         Assert.NotEmpty(result.Images);
         Assert.NotNull(result.Variants.First().Color);

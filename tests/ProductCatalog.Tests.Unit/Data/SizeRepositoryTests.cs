@@ -16,6 +16,10 @@ public class SizeRepositoryTests : IClassFixture<DatabaseFixture>
     {
         _fixture = fixture;
         _repository = new SizeRepository(_fixture.Context);
+
+        // Clear caches and change tracker to avoid conflicts between tests
+        ProductBuilder.ClearCache();
+        _fixture.ClearChangeTracker();
     }
 
     [Fact]
