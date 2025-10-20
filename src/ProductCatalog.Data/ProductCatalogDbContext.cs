@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using ProductCatalog.Domain.Entities;
 using ProductCatalog.Data.Configurations;
 using ProductCatalog.Data.Extensions;
+using ProductCatalog.Domain.Entities;
 
 namespace ProductCatalog.Data;
 
@@ -24,38 +24,38 @@ public class ProductCatalogDbContext : DbContext
         ConfigureNamingConventions(modelBuilder);
     }
 
-public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-{
-    NormalizeDateTimesToUtc();
-    return await base.SaveChangesAsync(cancellationToken);
-}
-
-public override int SaveChanges()
-{
-    NormalizeDateTimesToUtc();
-    return base.SaveChanges();
-}
-
-private void NormalizeDateTimesToUtc()
-{
-    var entries = ChangeTracker.Entries()
-        .Where(e => e.State is EntityState.Added or EntityState.Modified);
-
-    foreach (var e in entries)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var props = e.Properties
-            .Where(p => p.Metadata.ClrType == typeof(DateTime) && p.CurrentValue is DateTime);
+        NormalizeDateTimesToUtc();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
 
-        foreach (var p in props)
+    public override int SaveChanges()
+    {
+        NormalizeDateTimesToUtc();
+        return base.SaveChanges();
+    }
+
+    private void NormalizeDateTimesToUtc()
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified);
+
+        foreach (var e in entries)
         {
-            var dt = (DateTime)p.CurrentValue!;
-            if (dt.Kind == DateTimeKind.Unspecified)
-                p.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-            else if (dt.Kind == DateTimeKind.Local)
-                p.CurrentValue = dt.ToUniversalTime();
+            var props = e.Properties
+                .Where(p => p.Metadata.ClrType == typeof(DateTime) && p.CurrentValue is DateTime);
+
+            foreach (var p in props)
+            {
+                var dt = (DateTime)p.CurrentValue!;
+                if (dt.Kind == DateTimeKind.Unspecified)
+                    p.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                else if (dt.Kind == DateTimeKind.Local)
+                    p.CurrentValue = dt.ToUniversalTime();
+            }
         }
     }
-}
 
 
     private static void ApplyEntityConfigurations(ModelBuilder modelBuilder)
@@ -88,4 +88,4 @@ private void NormalizeDateTimesToUtc()
         }
     }
 
-   }
+}

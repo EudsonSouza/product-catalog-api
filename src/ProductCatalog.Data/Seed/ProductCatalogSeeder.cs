@@ -1,12 +1,12 @@
-using Bogus;
-using Microsoft.EntityFrameworkCore;
-using ProductCatalog.Domain.Entities;
-using ProductCatalog.Domain.Enums;
+using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Data;
+using Bogus;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using System.Diagnostics.CodeAnalysis;
+using ProductCatalog.Domain.Entities;
+using ProductCatalog.Domain.Enums;
 
 namespace ProductCatalog.Data.Seed;
 
@@ -147,7 +147,7 @@ DO UPDATE SET
 
     private static async Task SeedProductsAsync(ProductCatalogDbContext context)
     {
-        var categories = await context.Categories.AsNoTracking().ToListAsync();
+        var categories = await context.Categories.ToListAsync();
         var colors = await context.Colors.AsNoTracking().ToListAsync();
         var sizes = await context.Sizes.AsNoTracking().ToListAsync();
 
@@ -160,7 +160,6 @@ DO UPDATE SET
             .RuleFor(p => p.Id, _ => Guid.NewGuid())
             .RuleFor(p => p.Name, f => f.Commerce.ProductName())
             .RuleFor(p => p.Description, f => f.Commerce.ProductDescription())
-            .RuleFor(p => p.CategoryId, f => f.PickRandom(categories).Id)
             .RuleFor(p => p.Gender, f => f.PickRandom<Gender>())
             .RuleFor(p => p.BasePrice, f => Math.Round(f.Random.Decimal(10, 200), 2))
             .RuleFor(p => p.IsActive, f => f.Random.Bool(0.9f))
@@ -183,6 +182,14 @@ DO UPDATE SET
             products.Add(p);
         }
 
+        // assign 1-2 categories per product
+        foreach (var p in products)
+        {
+            var picks = categories.OrderBy(_ => Guid.NewGuid()).Take(Random.Shared.Next(1, 3)).ToList();
+            foreach (var c in picks)
+                p.Categories.Add(c);
+        }
+
         context.Products.AddRange(products);
         await context.SaveChangesAsync();
 
@@ -200,22 +207,22 @@ DO UPDATE SET
             var productSizes = sizes.OrderBy(_ => Guid.NewGuid()).Take(Random.Shared.Next(2, 5)).ToList();
 
             foreach (var color in productColors)
-            foreach (var size in productSizes)
-            {
-                variants.Add(new ProductVariant
+                foreach (var size in productSizes)
                 {
-                    Id = Guid.NewGuid(),
-                    ProductId = product.Id,
-                    ColorId = color.Id,
-                    SizeId = size.Id,
-                    SKU = $"{product.Slug}-{ToSlug(color.Name)}-{ToSlug(size.Name)}",
-                    Price = Random.Shared.Next(0, 3) == 0 ? product.BasePrice + Random.Shared.Next(-10, 20) : null,
-                    StockQuantity = Random.Shared.Next(0, 100),
-                    IsAvailable = Random.Shared.Next(0, 10) > 1,
-                    CreatedAt = product.CreatedAt,
-                    UpdatedAt = product.UpdatedAt
-                });
-            }
+                    variants.Add(new ProductVariant
+                    {
+                        Id = Guid.NewGuid(),
+                        ProductId = product.Id,
+                        ColorId = color.Id,
+                        SizeId = size.Id,
+                        SKU = $"{product.Slug}-{ToSlug(color.Name)}-{ToSlug(size.Name)}",
+                        Price = Random.Shared.Next(0, 3) == 0 ? product.BasePrice + Random.Shared.Next(-10, 20) : null,
+                        StockQuantity = Random.Shared.Next(0, 100),
+                        IsAvailable = Random.Shared.Next(0, 10) > 1,
+                        CreatedAt = product.CreatedAt,
+                        UpdatedAt = product.UpdatedAt
+                    });
+                }
         }
 
         context.ProductVariants.AddRange(variants);

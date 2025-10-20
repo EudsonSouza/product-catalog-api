@@ -35,7 +35,7 @@ public class ColorsController : ControllerBase
         var color = await _colorRepository.GetByIdAsync(id);
         if (color == null)
             return NotFound();
-        
+
         return Ok(color);
     }
 }
