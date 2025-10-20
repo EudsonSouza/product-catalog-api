@@ -16,26 +16,27 @@ public class ProductService : IProductService
 
     public async Task<ProductDto?> GetByIdAsync(Guid id)
     {
-        var product = await _unitOfWork.Products.GetByIdAsync(id);
+        var product = await _unitOfWork.Products.GetCompleteAsync(id);
         return product?.ToDto();
     }
 
     public async Task<IEnumerable<ProductDto>> GetAllAsync(ProductQueryDto query)
     {
         var products = await _unitOfWork.Products.GetAllAsync();
-        
+
         var filteredProducts = products.AsQueryable();
 
         if (!string.IsNullOrEmpty(query.Search))
         {
-            filteredProducts = filteredProducts.Where(p => 
+            filteredProducts = filteredProducts.Where(p =>
                 p.Name.Contains(query.Search, StringComparison.OrdinalIgnoreCase) ||
                 (p.Description != null && p.Description.Contains(query.Search, StringComparison.OrdinalIgnoreCase)));
         }
 
         if (query.CategoryId.HasValue)
         {
-            filteredProducts = filteredProducts.Where(p => p.CategoryId == query.CategoryId);
+            var catId = query.CategoryId.Value;
+            filteredProducts = filteredProducts.Where(p => p.Categories.Any(c => c.Id == catId));
         }
 
         if (query.Gender.HasValue)
@@ -67,7 +68,6 @@ public class ProductService : IProductService
             Id = Guid.NewGuid(),
             Name = dto.Name,
             Description = dto.Description,
-            CategoryId = dto.CategoryId,
             Gender = dto.Gender,
             BasePrice = dto.BasePrice,
             IsActive = true,
@@ -77,6 +77,19 @@ public class ProductService : IProductService
         };
 
         product.SetName(dto.Name);
+
+        // Attach categories
+        if (dto.CategoryIds?.Count > 0)
+        {
+            foreach (var cid in dto.CategoryIds.Distinct())
+            {
+                var cat = await _unitOfWork.Categories.GetByIdAsync(cid);
+                if (cat != null)
+                {
+                    product.Categories.Add(cat);
+                }
+            }
+        }
 
         await _unitOfWork.Products.AddAsync(product);
         await _unitOfWork.SaveChangesAsync();
@@ -100,9 +113,17 @@ public class ProductService : IProductService
             product.Description = dto.Description;
         }
 
-        if (dto.CategoryId.HasValue)
+        if (dto.CategoryIds != null)
         {
-            product.CategoryId = dto.CategoryId.Value;
+            product.Categories.Clear();
+            foreach (var cid in dto.CategoryIds.Distinct())
+            {
+                var cat = await _unitOfWork.Categories.GetByIdAsync(cid);
+                if (cat != null)
+                {
+                    product.Categories.Add(cat);
+                }
+            }
         }
 
         if (dto.Gender.HasValue)
@@ -163,7 +184,7 @@ public static class ProductExtensions
             product.Name,
             product.Description,
             product.Slug,
-            product.CategoryId,
+            product.Categories.Select(c => c.Id).ToList(),
             product.Gender,
             product.BasePrice,
             product.IsActive,

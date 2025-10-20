@@ -7,7 +7,7 @@ public record ProductDto(
     string Name,
     string? Description,
     string Slug,
-    Guid CategoryId,
+    IReadOnlyList<Guid> CategoryIds,
     Gender Gender,
     decimal? BasePrice,
     bool IsActive,
@@ -19,7 +19,7 @@ public record ProductDto(
 public record CreateProductDto(
     string Name,
     string? Description,
-    Guid CategoryId,
+    IReadOnlyList<Guid> CategoryIds,
     Gender Gender,
     decimal? BasePrice
 );
@@ -27,7 +27,7 @@ public record CreateProductDto(
 public record UpdateProductDto(
     string? Name,
     string? Description,
-    Guid? CategoryId,
+    IReadOnlyList<Guid>? CategoryIds,
     Gender? Gender,
     decimal? BasePrice,
     bool? IsActive,

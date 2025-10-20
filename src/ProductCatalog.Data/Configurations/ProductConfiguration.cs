@@ -36,9 +36,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .IsRequired()
             .HasMaxLength(250);
 
-        builder.Property(p => p.CategoryId)
-            .IsRequired();
-
         builder.Property(p => p.Gender)
             .IsRequired()
             .HasConversion<string>();
@@ -67,9 +64,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .IsUnique()
             .HasDatabaseName("ix_products_slug");
 
-        builder.HasIndex(p => p.CategoryId)
-            .HasDatabaseName("ix_products_category_id");
-
         builder.HasIndex(p => p.Gender)
             .HasDatabaseName("ix_products_gender");
 
@@ -85,10 +79,22 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
     private static void ConfigureRelationships(EntityTypeBuilder<Product> builder)
     {
-        builder.HasOne(p => p.Category)
+        builder
+            .HasMany(p => p.Categories)
             .WithMany(c => c.Products)
-            .HasForeignKey(p => p.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .UsingEntity<Dictionary<string, object>>(
+                "product_categories",
+                j => j
+                    .HasOne<Category>()
+                    .WithMany()
+                    .HasForeignKey("category_id")
+                    .OnDelete(DeleteBehavior.Cascade),
+                j => j
+                    .HasOne<Product>()
+                    .WithMany()
+                    .HasForeignKey("product_id")
+                    .OnDelete(DeleteBehavior.Cascade))
+            .ToTable("product_categories");
 
         builder.HasMany(p => p.Variants)
             .WithOne(v => v.Product)

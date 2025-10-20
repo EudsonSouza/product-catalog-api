@@ -47,6 +47,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.UpdatedAt)
             .IsRequired()
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.Property(c => c.ParentId)
+            .IsRequired(false);
     }
 
     private static void ConfigureIndexes(EntityTypeBuilder<Category> builder)
@@ -63,13 +66,16 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.HasIndex(c => new { c.Gender, c.IsActive })
             .HasDatabaseName("ix_categories_gender_active");
+
+        builder.HasIndex(c => c.ParentId)
+            .HasDatabaseName("ix_categories_parent_id");
     }
 
     private static void ConfigureRelationships(EntityTypeBuilder<Category> builder)
     {
-        builder.HasMany(c => c.Products)
-            .WithOne(p => p.Category)
-            .HasForeignKey(p => p.CategoryId)
+        builder.HasOne(c => c.Parent)
+            .WithMany(c => c.Children)
+            .HasForeignKey(c => c.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
