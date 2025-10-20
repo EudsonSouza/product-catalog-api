@@ -1,8 +1,8 @@
-﻿namespace ProductCatalog.Domain.Enums;
+namespace ProductCatalog.Domain.Enums;
 
 public enum Gender
 {
-    M,      
-    F,      
+    M,
+    F,
     Unisex
 }

@@ -12,7 +12,7 @@ public class ProductVariant
     public bool IsAvailable { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     // Navigation Properties
     public Product Product { get; set; } = null!;
     public Color Color { get; set; } = null!;
@@ -21,17 +21,17 @@ public class ProductVariant
 
     // Business Logic
     public bool IsInStock() => IsAvailable && StockQuantity > 0;
-    
+
     public void UpdateStock(int quantity)
     {
         if (quantity < 0)
             throw new ArgumentException("Stock cannot be negative");
-            
+
         StockQuantity = quantity;
         IsAvailable = quantity > 0;
     }
-    
-    
+
+
     public decimal GetEffectivePrice()
     {
         return Price ?? Product.BasePrice ?? 0;
