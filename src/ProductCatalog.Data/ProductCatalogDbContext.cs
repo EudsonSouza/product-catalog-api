@@ -15,6 +15,7 @@ public class ProductCatalogDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Color> Colors { get; set; }
     public DbSet<Size> Sizes { get; set; }
+    public DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +67,7 @@ public class ProductCatalogDbContext : DbContext
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
         modelBuilder.ApplyConfiguration(new ColorConfiguration());
         modelBuilder.ApplyConfiguration(new SizeConfiguration());
+        modelBuilder.ApplyConfiguration(new UserConfiguration());
     }
 
     private static void ConfigureNamingConventions(ModelBuilder modelBuilder)
