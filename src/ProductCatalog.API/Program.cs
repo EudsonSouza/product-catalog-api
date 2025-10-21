@@ -1,9 +1,12 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using ProductCatalog.API.Health;
 using ProductCatalog.Data;
 using ProductCatalog.Data.Helpers;
@@ -14,73 +17,251 @@ using ProductCatalog.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddHttpContextAccessor();
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-});
-
-builder.Services.Configure<ForwardedHeadersOptions>(o =>
-{
-    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-    o.KnownNetworks.Clear();
-    o.KnownProxies.Clear();
-});
-
-builder.Services.AddOpenApi(options =>
-{
-    options.AddDocumentTransformer((document, context, cancellationToken) =>
-    {
-        document.Info.Description = "Product Catalog API - GET endpoints are public, POST/PUT/DELETE require admin authorization";
-        return Task.CompletedTask;
-    });
-});
-
-var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                        ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
-                        ?? builder.Configuration["DATABASE_URL"];
-
-var connectionString = DatabaseConnectionHelper.ConvertToNpgsqlConnectionString(rawConnectionString);
-
-builder.Services.AddDbContext<ProductCatalogDbContext>(options =>
-    options.UseNpgsql(connectionString));
-
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-builder.Services.AddScoped<IColorRepository, ColorRepository>();
-builder.Services.AddScoped<ISizeRepository, SizeRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IProductService, ProductService>();
-
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("RequireAdmin", policy =>
-        policy.RequireClaim("role", "admin"));
-
-builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: HealthStatics.LiveTags)
-    .AddCheck<DbHealthCheck>("database", tags: HealthStatics.ReadyTags);
+ConfigureServices(builder);
 
 var app = builder.Build();
 
-var enableSwagger = builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", app.Environment.IsDevelopment());
+ConfigureMiddleware(app);
+ConfigureEndpoints(app);
 
-if (enableSwagger)
+app.Run();
+
+void ConfigureServices(WebApplicationBuilder appBuilder)
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(options =>
+    appBuilder.Services.AddControllers();
+    appBuilder.Services.AddHttpContextAccessor();
+
+    ConfigureJsonSerialization(appBuilder.Services);
+    ConfigureForwardedHeaders(appBuilder.Services);
+    ConfigureOpenApi(appBuilder.Services);
+    ConfigureDatabase(appBuilder);
+    RegisterRepositories(appBuilder.Services);
+    RegisterServices(appBuilder.Services);
+    ConfigureJwtAuthentication(appBuilder);
+    ConfigureAuthorization(appBuilder.Services);
+    ConfigureHealthChecks(appBuilder.Services);
+}
+
+void ConfigureJsonSerialization(IServiceCollection services)
+{
+    services.ConfigureHttpJsonOptions(options =>
     {
-        options.SwaggerEndpoint("/openapi/v1.json", "Product Catalog API v1");
-        options.RoutePrefix = "swagger";
-        options.DocumentTitle = "Product Catalog API - Read Only Demo";
+        options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 }
 
-// IMPORTANT: apply forwarded headers BEFORE https redirection/auth/etc.
-app.UseForwardedHeaders();
+void ConfigureForwardedHeaders(IServiceCollection services)
+{
+    services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
-app.UseHttpsRedirection();
+void ConfigureOpenApi(IServiceCollection services)
+{
+    services.AddOpenApi(options =>
+    {
+        options.AddDocumentTransformer((document, context, cancellationToken) =>
+        {
+            document.Info.Description = "Product Catalog API - GET endpoints are public, POST/PUT/DELETE require admin authorization";
+
+            AddJwtSecuritySchemeToSwagger(document);
+            ApplyGlobalSecurityRequirement(document);
+
+            return Task.CompletedTask;
+        });
+    });
+}
+
+void AddJwtSecuritySchemeToSwagger(Microsoft.OpenApi.Models.OpenApiDocument document)
+{
+    document.Components ??= new Microsoft.OpenApi.Models.OpenApiComponents();
+    document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.Models.OpenApiSecurityScheme>();
+    document.Components.SecuritySchemes.Add("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. Enter your JWT token in the text input below."
+    });
+}
+
+void ApplyGlobalSecurityRequirement(Microsoft.OpenApi.Models.OpenApiDocument document)
+{
+    document.SecurityRequirements ??= new List<Microsoft.OpenApi.Models.OpenApiSecurityRequirement>();
+    document.SecurityRequirements.Add(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+}
+
+void ConfigureDatabase(WebApplicationBuilder appBuilder)
+{
+    var rawConnectionString = appBuilder.Configuration.GetConnectionString("DefaultConnection")
+                            ?? appBuilder.Configuration["ConnectionStrings__DefaultConnection"]
+                            ?? appBuilder.Configuration["DATABASE_URL"];
+
+    var connectionString = DatabaseConnectionHelper.ConvertToNpgsqlConnectionString(rawConnectionString);
+
+    appBuilder.Services.AddDbContext<ProductCatalogDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+
+void RegisterRepositories(IServiceCollection services)
+{
+    services.AddScoped<IProductRepository, ProductRepository>();
+    services.AddScoped<ICategoryRepository, CategoryRepository>();
+    services.AddScoped<IColorRepository, ColorRepository>();
+    services.AddScoped<ISizeRepository, SizeRepository>();
+    services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IUnitOfWork, UnitOfWork>();
+}
+
+void RegisterServices(IServiceCollection services)
+{
+    services.AddScoped<IProductService, ProductService>();
+    services.AddScoped<IAuthService, AuthService>();
+}
+
+void ConfigureJwtAuthentication(WebApplicationBuilder appBuilder)
+{
+    var jwtSecret = appBuilder.Configuration["Jwt:Secret"]
+        ?? throw new InvalidOperationException("JWT Secret is not configured");
+    var jwtIssuer = appBuilder.Configuration["Jwt:Issuer"]
+        ?? throw new InvalidOperationException("JWT Issuer is not configured");
+    var jwtAudience = appBuilder.Configuration["Jwt:Audience"]
+        ?? throw new InvalidOperationException("JWT Audience is not configured");
+
+    appBuilder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+}
+
+void ConfigureAuthorization(IServiceCollection services)
+{
+    services.AddAuthorizationBuilder()
+        .AddPolicy("RequireAdmin", policy =>
+            policy.RequireClaim("role", "admin"));
+}
+
+void ConfigureHealthChecks(IServiceCollection services)
+{
+    services.AddHealthChecks()
+        .AddCheck("self", () => HealthCheckResult.Healthy(), tags: HealthStatics.LiveTags)
+        .AddCheck<DbHealthCheck>("database", tags: HealthStatics.ReadyTags);
+}
+
+void ConfigureMiddleware(WebApplication application)
+{
+    EnableSwaggerIfConfigured(application);
+
+    application.UseForwardedHeaders();
+    application.UseHttpsRedirection();
+    application.UseAuthentication();
+    application.UseAuthorization();
+}
+
+void EnableSwaggerIfConfigured(WebApplication application)
+{
+    var enableSwagger = builder.Configuration.GetValue<bool>("ENABLE_SWAGGER", application.Environment.IsDevelopment());
+
+    if (enableSwagger)
+    {
+        application.MapOpenApi();
+        application.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/openapi/v1.json", "Product Catalog API v1");
+            options.RoutePrefix = "swagger";
+            options.DocumentTitle = "Product Catalog API - Read Only Demo";
+        });
+    }
+}
+
+void ConfigureEndpoints(WebApplication application)
+{
+    MapLivenessHealthCheck(application);
+    MapReadinessHealthCheck(application);
+    application.MapControllers();
+}
+
+void MapLivenessHealthCheck(WebApplication application)
+{
+    application.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = r => r.Name == "self",
+        ResponseWriter = WriteJsonResponse,
+        ResultStatusCodes =
+        {
+            [HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+        }
+    }).WithOpenApi(operation =>
+    {
+        operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
+        {
+            new() { Name = "Health" }
+        };
+        operation.Summary = "Liveness health check";
+        operation.Description = "Returns the application liveness status";
+        return operation;
+    });
+}
+
+void MapReadinessHealthCheck(WebApplication application)
+{
+    application.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = r => r.Tags.Contains("ready"),
+        ResponseWriter = WriteJsonResponse,
+        ResultStatusCodes =
+        {
+            [HealthStatus.Healthy] = StatusCodes.Status200OK,
+            [HealthStatus.Degraded] = StatusCodes.Status200OK,
+            [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+        }
+    }).WithOpenApi(operation =>
+    {
+        operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
+        {
+            new() { Name = "Health" }
+        };
+        operation.Summary = "Readiness health check";
+        operation.Description = "Returns the application readiness status including database connectivity";
+        return operation;
+    });
+}
 
 static Task WriteJsonResponse(HttpContext context, HealthReport report)
 {
@@ -102,52 +283,6 @@ static Task WriteJsonResponse(HttpContext context, HealthReport report)
     var json = JsonSerializer.Serialize(payload, HealthStatics.JsonOpts);
     return context.Response.WriteAsync(json);
 }
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = r => r.Name == "self",
-    ResponseWriter = WriteJsonResponse,
-    ResultStatusCodes =
-    {
-        [HealthStatus.Healthy] = StatusCodes.Status200OK,
-        [HealthStatus.Degraded] = StatusCodes.Status200OK,
-        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
-    }
-}).WithOpenApi(operation =>
-{
-    operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
-    {
-        new() { Name = "Health" }
-    };
-    operation.Summary = "Liveness health check";
-    operation.Description = "Returns the application liveness status";
-    return operation;
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = r => r.Tags.Contains("ready"),
-    ResponseWriter = WriteJsonResponse,
-    ResultStatusCodes =
-    {
-        [HealthStatus.Healthy] = StatusCodes.Status200OK,
-        [HealthStatus.Degraded] = StatusCodes.Status200OK,
-        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
-    }
-}).WithOpenApi(operation =>
-{
-    operation.Tags = new List<Microsoft.OpenApi.Models.OpenApiTag>
-    {
-        new() { Name = "Health" }
-    };
-    operation.Summary = "Readiness health check";
-    operation.Description = "Returns the application readiness status including database connectivity";
-    return operation;
-});
-
-app.MapControllers();
-
-app.Run();
 
 #pragma warning disable CA1052
 internal static class HealthStatics
