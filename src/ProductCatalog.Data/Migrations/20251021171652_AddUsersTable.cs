@@ -1,0 +1,140 @@
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace ProductCatalog.Data.Migrations
+{
+    /// <inheritdoc />
+    public partial class AddUsersTable : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropForeignKey(
+                name: "f_k_products_categories_category_id",
+                table: "products");
+
+            migrationBuilder.DropIndex(
+                name: "ix_products_category_id",
+                table: "products");
+
+            migrationBuilder.DropColumn(
+                name: "category_id",
+                table: "products");
+
+            migrationBuilder.AddColumn<Guid>(
+                name: "parent_id",
+                table: "categories",
+                type: "uuid",
+                nullable: true);
+
+            migrationBuilder.CreateTable(
+                name: "product_categories",
+                columns: table => new
+                {
+                    category_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    product_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_product_categories", x => new { x.category_id, x.product_id });
+                    table.ForeignKey(
+                        name: "f_k_product_categories_categories_category_id",
+                        column: x => x.category_id,
+                        principalTable: "categories",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "f_k_product_categories_products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    username = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    password_hash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "admin"),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_users", x => x.id);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_categories_parent_id",
+                table: "categories",
+                column: "parent_id");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_product_categories_product_id",
+                table: "product_categories",
+                column: "product_id");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_users_username",
+                table: "users",
+                column: "username",
+                unique: true);
+
+            migrationBuilder.AddForeignKey(
+                name: "f_k_categories_categories_parent_id",
+                table: "categories",
+                column: "parent_id",
+                principalTable: "categories",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Restrict);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropForeignKey(
+                name: "f_k_categories_categories_parent_id",
+                table: "categories");
+
+            migrationBuilder.DropTable(
+                name: "product_categories");
+
+            migrationBuilder.DropTable(
+                name: "users");
+
+            migrationBuilder.DropIndex(
+                name: "ix_categories_parent_id",
+                table: "categories");
+
+            migrationBuilder.DropColumn(
+                name: "parent_id",
+                table: "categories");
+
+            migrationBuilder.AddColumn<Guid>(
+                name: "category_id",
+                table: "products",
+                type: "uuid",
+                nullable: false,
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"));
+
+            migrationBuilder.CreateIndex(
+                name: "ix_products_category_id",
+                table: "products",
+                column: "category_id");
+
+            migrationBuilder.AddForeignKey(
+                name: "f_k_products_categories_category_id",
+                table: "products",
+                column: "category_id",
+                principalTable: "categories",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Restrict);
+        }
+    }
+}
