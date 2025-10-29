@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using ProductCatalog.API.Health;
+using ProductCatalog.API.Middleware;
 using ProductCatalog.Data;
 using ProductCatalog.Data.Helpers;
 using ProductCatalog.Data.Repositories;
+using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
 using ProductCatalog.Services.Interfaces;
@@ -28,11 +30,17 @@ app.Run();
 
 void ConfigureServices(WebApplicationBuilder appBuilder)
 {
-    appBuilder.Services.AddControllers();
+    appBuilder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            options.JsonSerializerOptions.MaxDepth = 128;
+        });
     appBuilder.Services.AddHttpContextAccessor();
 
     ConfigureJsonSerialization(appBuilder.Services);
     ConfigureForwardedHeaders(appBuilder.Services);
+    ConfigureCors(appBuilder.Services, appBuilder.Configuration);
     ConfigureOpenApi(appBuilder.Services);
     ConfigureDatabase(appBuilder);
     RegisterRepositories(appBuilder.Services);
@@ -47,6 +55,7 @@ void ConfigureJsonSerialization(IServiceCollection services)
     services.ConfigureHttpJsonOptions(options =>
     {
         options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.SerializerOptions.MaxDepth = 128;
     });
 }
 
@@ -57,6 +66,23 @@ void ConfigureForwardedHeaders(IServiceCollection services)
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         options.KnownNetworks.Clear();
         options.KnownProxies.Clear();
+    });
+}
+
+void ConfigureCors(IServiceCollection services, IConfiguration configuration)
+{
+    var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? new[] { "http://localhost:3000", "http://localhost:3001" };
+
+    services.AddCors(options =>
+    {
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
     });
 }
 
@@ -128,14 +154,26 @@ void RegisterRepositories(IServiceCollection services)
     services.AddScoped<ICategoryRepository, CategoryRepository>();
     services.AddScoped<IColorRepository, ColorRepository>();
     services.AddScoped<ISizeRepository, SizeRepository>();
-    services.AddScoped<IUserRepository, UserRepository>();
     services.AddScoped<IUnitOfWork, UnitOfWork>();
 }
 
 void RegisterServices(IServiceCollection services)
 {
     services.AddScoped<IProductService, ProductService>();
-    services.AddScoped<IAuthService, AuthService>();
+    services.AddScoped<IUserService, UserService>();
+    services.AddScoped<ISessionService, SessionService>();
+    services.AddHttpClient<IGoogleOAuthService, GoogleOAuthService>();
+
+    // Configure settings
+    services.AddSingleton(sp =>
+    {
+        var config = sp.GetRequiredService<IConfiguration>();
+        return new ProductCatalog.API.Configuration.SessionSettings
+        {
+            CookieName = config["Session:CookieName"] ?? "product_catalog_session",
+            ExpirationHours = int.Parse(config["Session:ExpirationHours"] ?? "8")
+        };
+    });
 }
 
 void ConfigureJwtAuthentication(WebApplicationBuilder appBuilder)
@@ -188,6 +226,11 @@ void ConfigureMiddleware(WebApplication application)
 
     application.UseForwardedHeaders();
     application.UseHttpsRedirection();
+    application.UseCors("AllowFrontend");
+
+    // Session authentication middleware (before UseAuthentication)
+    application.UseMiddleware<SessionAuthenticationMiddleware>();
+
     application.UseAuthentication();
     application.UseAuthorization();
 }

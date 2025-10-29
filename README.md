@@ -60,48 +60,82 @@ Product catalog system for clothing e-commerce. Manages products with multiple v
 
 ## How to Run
 
-### Prerequisites
-- .NET 9 SDK
-- PostgreSQL database
+### Option 1: Docker (Recomendado)
 
-### Setup
 ```bash
 # Clone repository
 git clone <repo-url>
 cd product-catalog-api
 
-# Create environment file from template
+# Configure environment
+cp .env.example .env
+# Edit .env with your database and JWT settings
+
+# Start with Docker Compose
+docker compose up --build
+```
+
+API: `http://localhost:5080`
+Swagger: `http://localhost:5080/swagger`
+
+### Option 2: Local Development
+
+**Prerequisites:** .NET 9 SDK + PostgreSQL
+
+```bash
+# Clone and configure
+git clone <repo-url>
+cd product-catalog-api
 cp .env.example .env
 
-# Edit .env file with your configuration
-# Update database credentials and other settings
-
-# Restore packages
+# Restore and run migrations
 dotnet restore
-
-# Run migrations
 dotnet ef database update --project src/ProductCatalog.Data --startup-project src/ProductCatalog.API
 
 # Run the API
 dotnet run --project src/ProductCatalog.API
 ```
 
-### Environment Configuration
+API: `https://localhost:7242`
 
-The application uses environment variables for configuration. Create a `.env` file from the template:
+### Environment Variables
 
-```bash
-cp .env.example .env
+Required in `.env`:
+- **Database**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`
+- **JWT**: `Jwt:Secret`, `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationHours`
+
+## Testing with Postman
+
+### Login
+```http
+POST http://localhost:5080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "your_password"
+}
 ```
 
-Required environment variables:
-- `DB_HOST` - Database host (localhost for development)
-- `DB_PORT` - Database port (5432 for PostgreSQL)
-- `DB_NAME` - Database name
-- `DB_USERNAME` - Database username
-- `DB_PASSWORD` - Database password
+**Response:**
+```json
+{
+  "token": "eyJhbGci...",
+  "username": "admin",
+  "expiresAt": "2025-10-21T10:30:00Z"
+}
+```
 
-API will be available at `https://localhost:7242`.
+### Using Token in Protected Endpoints
+Add header to POST/PUT/DELETE requests:
+```
+Authorization: Bearer YOUR_TOKEN_HERE
+```
+
+## Documentation
+
+📚 **Complete docs**: [/docs](./docs/00-Overview/README.md)
+📖 **API Endpoints**: [API_ENDPOINTS.md](./API_ENDPOINTS.md)
 
 ## Project Origin
 
