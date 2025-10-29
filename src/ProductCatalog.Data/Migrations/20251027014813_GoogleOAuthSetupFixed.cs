@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ProductCatalog.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUsersTable : Migration
+    public partial class GoogleOAuthSetupFixed : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -58,16 +58,38 @@ namespace ProductCatalog.Data.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    username = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    password_hash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "admin"),
-                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    picture_url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    is_admin = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("p_k_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    expires_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
+                    user_agent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_user_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_user_sessions_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -81,9 +103,19 @@ namespace ProductCatalog.Data.Migrations
                 column: "product_id");
 
             migrationBuilder.CreateIndex(
-                name: "i_x_users_username",
+                name: "i_x_user_sessions_expires_at",
+                table: "user_sessions",
+                column: "expires_at");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_user_sessions_user_id",
+                table: "user_sessions",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_users_email",
                 table: "users",
-                column: "username",
+                column: "email",
                 unique: true);
 
             migrationBuilder.AddForeignKey(
@@ -104,6 +136,9 @@ namespace ProductCatalog.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "product_categories");
+
+            migrationBuilder.DropTable(
+                name: "user_sessions");
 
             migrationBuilder.DropTable(
                 name: "users");
