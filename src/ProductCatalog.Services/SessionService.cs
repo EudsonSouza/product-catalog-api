@@ -5,85 +5,126 @@ using ProductCatalog.Domain.Entities;
 using ProductCatalog.Services.DTOs;
 using ProductCatalog.Services.Interfaces;
 
-namespace ProductCatalog.Services;
-
-public class SessionService : ISessionService
+namespace ProductCatalog.Services
 {
-    private readonly ProductCatalogDbContext _context;
-    private readonly int _sessionExpirationHours;
-
-    public SessionService(ProductCatalogDbContext context, IConfiguration configuration)
+    public class SessionService : ISessionService
     {
-        _context = context;
-        _sessionExpirationHours = int.Parse(configuration["Session:ExpirationHours"] ?? "8");
-    }
+        private const string SessionExpirationConfigKey = "Session:ExpirationHours";
+        private const string DefaultSessionExpirationHours = "8";
 
-    public async Task<UserSession> CreateSessionAsync(Guid userId, string? ipAddress, string? userAgent)
-    {
-        var session = new UserSession
+        private readonly ProductCatalogDbContext _context;
+        private readonly int _sessionExpirationHours;
+
+        public SessionService(ProductCatalogDbContext context, IConfiguration configuration)
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            ExpiresAt = DateTime.UtcNow.AddHours(_sessionExpirationHours),
-            IpAddress = ipAddress,
-            UserAgent = userAgent,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.UserSessions.Add(session);
-        await _context.SaveChangesAsync();
-
-        return session;
-    }
-
-    public async Task<SessionInfo?> GetSessionAsync(Guid sessionId)
-    {
-        var session = await _context.UserSessions
-            .Include(s => s.User)
-            .FirstOrDefaultAsync(s => s.Id == sessionId);
-
-        if (session == null)
-            return null;
-
-        // Check if session is expired
-        if (session.ExpiresAt < DateTime.UtcNow)
-        {
-            await DeleteSessionAsync(sessionId);
-            return null;
+            _context = context;
+            _sessionExpirationHours = LoadSessionExpirationFromConfiguration(configuration);
         }
 
-        return new SessionInfo
+        public async Task<UserSession> CreateSessionAsync(Guid userId, string? ipAddress, string? userAgent)
         {
-            SessionId = session.Id,
-            UserId = session.UserId,
-            Email = session.User.Email,
-            Name = session.User.Name,
-            PictureUrl = session.User.PictureUrl,
-            IsAdmin = session.User.IsAdmin,
-            ExpiresAt = session.ExpiresAt
-        };
-    }
+            var session = BuildSession(userId, ipAddress, userAgent);
 
-    public async Task<bool> DeleteSessionAsync(Guid sessionId)
-    {
-        var session = await _context.UserSessions.FindAsync(sessionId);
-        if (session == null)
-            return false;
+            _context.UserSessions.Add(session);
+            await _context.SaveChangesAsync();
 
-        _context.UserSessions.Remove(session);
-        await _context.SaveChangesAsync();
-        return true;
-    }
+            return session;
+        }
 
-    public async Task<int> DeleteExpiredSessionsAsync()
-    {
-        var expiredSessions = await _context.UserSessions
-            .Where(s => s.ExpiresAt < DateTime.UtcNow)
-            .ToListAsync();
+        public async Task<SessionInfo?> GetSessionAsync(Guid sessionId)
+        {
+            var session = await FindSessionWithUserAsync(sessionId);
 
-        _context.UserSessions.RemoveRange(expiredSessions);
-        await _context.SaveChangesAsync();
+            if (session == null)
+            {
+                return null;
+            }
 
-        return expiredSessions.Count;
+            if (IsSessionExpired(session))
+            {
+                await DeleteSessionAsync(sessionId);
+                return null;
+            }
+
+            return ConvertToSessionInfo(session);
+        }
+
+        public async Task<bool> DeleteSessionAsync(Guid sessionId)
+        {
+            var session = await _context.UserSessions.FindAsync(sessionId);
+            if (session == null)
+                return false;
+
+            _context.UserSessions.Remove(session);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<int> DeleteExpiredSessionsAsync()
+        {
+            var expiredSessions = await FindExpiredSessionsAsync();
+
+            _context.UserSessions.RemoveRange(expiredSessions);
+            await _context.SaveChangesAsync();
+
+            return expiredSessions.Count;
+        }
+
+        private static int LoadSessionExpirationFromConfiguration(IConfiguration configuration)
+        {
+            var expirationHours = configuration[SessionExpirationConfigKey] ?? DefaultSessionExpirationHours;
+            return int.Parse(expirationHours);
+        }
+
+        private UserSession BuildSession(Guid userId, string? ipAddress, string? userAgent)
+        {
+            return new UserSession
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ExpiresAt = CalculateExpirationTime(),
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
+        private DateTime CalculateExpirationTime()
+        {
+            return DateTime.UtcNow.AddHours(_sessionExpirationHours);
+        }
+
+        private async Task<UserSession?> FindSessionWithUserAsync(Guid sessionId)
+        {
+            return await _context.UserSessions
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.Id == sessionId);
+        }
+
+        private static bool IsSessionExpired(UserSession session)
+        {
+            return session.ExpiresAt < DateTime.UtcNow;
+        }
+
+        private static SessionInfo ConvertToSessionInfo(UserSession session)
+        {
+            return new SessionInfo
+            {
+                SessionId = session.Id,
+                UserId = session.UserId,
+                Email = session.User.Email,
+                Name = session.User.Name,
+                PictureUrl = session.User.PictureUrl,
+                IsAdmin = session.User.IsAdmin,
+                ExpiresAt = session.ExpiresAt
+            };
+        }
+
+        private async Task<List<UserSession>> FindExpiredSessionsAsync()
+        {
+            return await _context.UserSessions
+                .Where(s => s.ExpiresAt < DateTime.UtcNow)
+                .ToListAsync();
+        }
     }
 }
