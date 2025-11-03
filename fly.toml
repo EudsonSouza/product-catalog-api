@@ -1,0 +1,45 @@
+# Fly.io Configuration - Staging Environment
+# Docs: https://fly.io/docs/reference/configuration/
+
+app = 'product-catalog-api-staging'
+primary_region = 'gru'  # São Paulo - mesma região do Neon (sa-east-1)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'      # Economiza recursos em staging
+  auto_start_machines = true
+  min_machines_running = 0         # Pode parar completamente quando sem uso
+  processes = ['app']
+
+  # Health check usando endpoint de readiness
+  [[http_service.checks]]
+    type = 'http'
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health/ready'
+
+[[vm]]
+  memory = '512mb'    # Staging pode usar menos recursos
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Environment variables (não-sensíveis)
+[env]
+  ASPNETCORE_ENVIRONMENT = 'Staging'
+  ENABLE_SWAGGER = 'true'
+  Session__CookieName = 'product_catalog_session'
+  Session__ExpirationHours = '8'
+  Jwt__Issuer = 'ProductCatalogAPI'
+  Jwt__Audience = 'ProductCatalogAPI'
+
+# Secrets devem ser configurados via CLI:
+# fly secrets set DATABASE_URL="postgres://..." --app product-catalog-api-staging
+# fly secrets set Google__ClientId="..." --app product-catalog-api-staging
+# fly secrets set Google__ClientSecret="..." --app product-catalog-api-staging
+# fly secrets set Jwt__Secret="..." --app product-catalog-api-staging
