@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,7 +11,6 @@ using ProductCatalog.API.Middleware;
 using ProductCatalog.Data;
 using ProductCatalog.Data.Helpers;
 using ProductCatalog.Data.Repositories;
-using ProductCatalog.Domain.Entities;
 using ProductCatalog.Domain.Interfaces;
 using ProductCatalog.Services;
 using ProductCatalog.Services.Interfaces;
@@ -35,6 +33,7 @@ void ConfigureServices(WebApplicationBuilder appBuilder)
         {
             options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             options.JsonSerializerOptions.MaxDepth = 128;
+            options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         });
     appBuilder.Services.AddHttpContextAccessor();
 
@@ -56,6 +55,7 @@ void ConfigureJsonSerialization(IServiceCollection services)
     {
         options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.SerializerOptions.MaxDepth = 128;
+        options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 }
 
@@ -74,6 +74,8 @@ void ConfigureCors(IServiceCollection services, IConfiguration configuration)
     var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
         ?? new[] { "http://localhost:3000", "http://localhost:3001" };
 
+    var allowVercelPreviews = configuration.GetValue<bool>("Cors:AllowVercelPreviews", false);
+
     services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
@@ -82,6 +84,18 @@ void ConfigureCors(IServiceCollection services, IConfiguration configuration)
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
+
+            if (allowVercelPreviews)
+            {
+                policy.SetIsOriginAllowed(origin =>
+                {
+                    if (string.IsNullOrEmpty(origin))
+                        return false;
+
+                    var uri = new Uri(origin);
+                    return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+                });
+            }
         });
     });
 }
@@ -172,6 +186,15 @@ void RegisterServices(IServiceCollection services)
         {
             CookieName = config["Session:CookieName"] ?? "product_catalog_session",
             ExpirationHours = int.Parse(config["Session:ExpirationHours"] ?? "8")
+        };
+    });
+
+    services.AddSingleton(sp =>
+    {
+        var config = sp.GetRequiredService<IConfiguration>();
+        return new ProductCatalog.API.Configuration.FrontendSettings
+        {
+            BaseUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000"
         };
     });
 }
@@ -332,6 +355,10 @@ internal static class HealthStatics
 {
     public static readonly string[] LiveTags = new[] { "live" };
     public static readonly string[] ReadyTags = new[] { "ready" };
-    public static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
+    public static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        WriteIndented = false,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 }
 #pragma warning restore CA1052

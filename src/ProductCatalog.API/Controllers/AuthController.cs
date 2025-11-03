@@ -28,17 +28,20 @@ public class AuthController : ControllerBase
     private readonly IUserService _userService;
     private readonly ISessionService _sessionService;
     private readonly SessionSettings _sessionSettings;
+    private readonly FrontendSettings _frontendSettings;
 
     public AuthController(
         IGoogleOAuthService googleOAuthService,
         IUserService userService,
         ISessionService sessionService,
-        SessionSettings sessionSettings)
+        SessionSettings sessionSettings,
+        FrontendSettings frontendSettings)
     {
         _googleOAuthService = googleOAuthService;
         _userService = userService;
         _sessionService = sessionService;
         _sessionSettings = sessionSettings;
+        _frontendSettings = frontendSettings;
     }
 
     /// <summary>
@@ -168,11 +171,15 @@ public class AuthController : ControllerBase
 
     private CookieOptions CreateSessionCookieOptions()
     {
+        // Allow insecure cookies when frontend is localhost (staging testing)
+        var isLocalFrontend = _frontendSettings.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase);
+
         return new CookieOptions
         {
             HttpOnly = true,
-            Secure = Request.IsHttps,
-            SameSite = SameSiteMode.Lax,
+            // None required for cross-origin (localhost → staging)
+            Secure = !isLocalFrontend,
+            SameSite = isLocalFrontend ? SameSiteMode.None : SameSiteMode.Lax,
             MaxAge = TimeSpan.FromHours(_sessionSettings.ExpirationHours)
         };
     }
@@ -214,9 +221,9 @@ public class AuthController : ControllerBase
 
     private string GetAndCleanupReturnUrl()
     {
-        var returnUrl = Request.Cookies[ReturnUrlCookieName] ?? DefaultReturnUrl;
+        var relativePath = Request.Cookies[ReturnUrlCookieName] ?? DefaultReturnUrl;
         Response.Cookies.Delete(ReturnUrlCookieName);
-        return returnUrl;
+        return $"{_frontendSettings.BaseUrl}{relativePath}";
     }
 
     private bool TryGetSessionIdFromCookie(out Guid sessionId)
