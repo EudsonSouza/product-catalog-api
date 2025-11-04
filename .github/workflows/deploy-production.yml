@@ -1,0 +1,50 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io Production
+    runs-on: ubuntu-latest
+
+    # Só faz deploy em push/merge, não em PR aberto
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io Production
+        run: flyctl deploy --config fly.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ProductCatalog.sln
+
+      - name: Build
+        run: dotnet build ProductCatalog.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test ProductCatalog.sln --configuration Release --no-build --verbosity minimal
