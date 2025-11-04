@@ -2,7 +2,7 @@
 # Docs: https://fly.io/docs/reference/configuration/
 
 app = 'product-catalog-api-staging'
-primary_region = 'gru'  # São Paulo - mesma região do Neon (sa-east-1)
+primary_region = 'gru'  # São Paulo - same region as Neon (sa-east-1)
 
 [build]
   dockerfile = "Dockerfile"
@@ -10,12 +10,12 @@ primary_region = 'gru'  # São Paulo - mesma região do Neon (sa-east-1)
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'      # Economiza recursos em staging
+  auto_stop_machines = 'stop'      # Save resources in staging
   auto_start_machines = true
-  min_machines_running = 0         # Pode parar completamente quando sem uso
+  min_machines_running = 0         # Can stop completely when idle
   processes = ['app']
 
-  # Health check usando endpoint de readiness
+  # Health check using readiness endpoint
   [[http_service.checks]]
     type = 'http'
     interval = '15s'
@@ -25,11 +25,11 @@ primary_region = 'gru'  # São Paulo - mesma região do Neon (sa-east-1)
     path = '/health/ready'
 
 [[vm]]
-  memory = '512mb'    # Staging pode usar menos recursos
+  memory = '512mb'    # Staging can use fewer resources
   cpu_kind = 'shared'
   cpus = 1
 
-# Environment variables (não-sensíveis)
+# Environment variables (non-sensitive)
 [env]
   ASPNETCORE_ENVIRONMENT = 'Staging'
   ENABLE_SWAGGER = 'true'
@@ -38,8 +38,9 @@ primary_region = 'gru'  # São Paulo - mesma região do Neon (sa-east-1)
   Jwt__Issuer = 'ProductCatalogAPI'
   Jwt__Audience = 'ProductCatalogAPI'
 
-# Secrets devem ser configurados via CLI:
-# fly secrets set DATABASE_URL="postgres://..." --app product-catalog-api-staging
-# fly secrets set Google__ClientId="..." --app product-catalog-api-staging
-# fly secrets set Google__ClientSecret="..." --app product-catalog-api-staging
-# fly secrets set Jwt__Secret="..." --app product-catalog-api-staging
+# Secrets must be configured via CLI:
+# flyctl secrets set ConnectionStrings__DefaultConnection="postgres://..." --app product-catalog-api-staging
+# flyctl secrets set Google__ClientId="..." --app product-catalog-api-staging
+# flyctl secrets set Google__ClientSecret="..." --app product-catalog-api-staging
+# flyctl secrets set Jwt__Secret="..." --app product-catalog-api-staging
+# flyctl secrets set AllowedOrigins__0="https://..." --app product-catalog-api-staging
