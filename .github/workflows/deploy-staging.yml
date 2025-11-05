@@ -12,7 +12,6 @@ jobs:
     name: Deploy to Fly.io Staging
     runs-on: ubuntu-latest
 
-    # Só faz deploy em push/merge, não em PR aberto
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
