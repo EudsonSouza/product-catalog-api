@@ -10,9 +10,9 @@ primary_region = 'gru'  # São Paulo - same region as Neon (sa-east-1)
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'suspend'   # Suspend after inactivity (~5-10min) - Maximum savings
+  auto_stop_machines = 'stop'      # Stop after inactivity - Will test startup time in production
   auto_start_machines = true       # Wake up when receiving requests
-  min_machines_running = 0         # Can suspend all machines
+  min_machines_running = 0         # Can stop all machines when idle
   processes = ['app']
 
   # Health check using readiness endpoint
