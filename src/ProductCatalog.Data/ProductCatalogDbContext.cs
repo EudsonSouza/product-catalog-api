@@ -15,6 +15,8 @@ public class ProductCatalogDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Color> Colors { get; set; }
     public DbSet<Size> Sizes { get; set; }
+    public DbSet<User> Users { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +68,36 @@ public class ProductCatalogDbContext : DbContext
         modelBuilder.ApplyConfiguration(new CategoryConfiguration());
         modelBuilder.ApplyConfiguration(new ColorConfiguration());
         modelBuilder.ApplyConfiguration(new SizeConfiguration());
+
+        ConfigureAuthTables(modelBuilder);
+    }
+
+    private static void ConfigureAuthTables(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("users");
+            entity.HasKey(u => u.Id);
+            entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
+            entity.Property(u => u.Name).IsRequired().HasMaxLength(255);
+            entity.Property(u => u.PictureUrl).HasMaxLength(500);
+            entity.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<UserSession>(entity =>
+        {
+            entity.ToTable("user_sessions");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.IpAddress).HasMaxLength(45);
+            entity.Property(s => s.UserAgent).HasMaxLength(500);
+            entity.HasIndex(s => s.ExpiresAt);
+            entity.HasIndex(s => s.UserId);
+
+            entity.HasOne(s => s.User)
+                .WithMany(u => u.Sessions)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 
     private static void ConfigureNamingConventions(ModelBuilder modelBuilder)

@@ -1,0 +1,46 @@
+# Fly.io Configuration - Production Environment
+# Docs: https://fly.io/docs/reference/configuration/
+
+app = 'product-catalog-api'
+primary_region = 'gru'  # São Paulo - same region as Neon (sa-east-1)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'      # Stop after inactivity - Will test startup time in production
+  auto_start_machines = true       # Wake up when receiving requests
+  min_machines_running = 0         # Can stop all machines when idle
+  processes = ['app']
+
+  # Health check using readiness endpoint
+  [[http_service.checks]]
+    type = 'http'
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health/ready'
+
+[[vm]]
+  memory = '512mb'    # Production uses minimal resources for cost optimization
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Environment variables (non-sensitive)
+[env]
+  ASPNETCORE_ENVIRONMENT = 'Production'
+  ENABLE_SWAGGER = 'false'
+  Session__CookieName = 'product_catalog_session'
+  Session__ExpirationHours = '8'
+  Jwt__Issuer = 'ProductCatalogAPI'
+  Jwt__Audience = 'ProductCatalogAPI'
+
+# Secrets must be configured via CLI:
+# flyctl secrets set ConnectionStrings__DefaultConnection="postgres://..." --app product-catalog-api
+# flyctl secrets set Google__ClientId="..." --app product-catalog-api
+# flyctl secrets set Google__ClientSecret="..." --app product-catalog-api
+# flyctl secrets set Jwt__Secret="..." --app product-catalog-api
+# flyctl secrets set AllowedOrigins__0="https://..." --app product-catalog-api

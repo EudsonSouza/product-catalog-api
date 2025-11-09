@@ -38,6 +38,10 @@ logs/
 .env.development
 .env.production
 
+# Local configuration overrides
+appsettings.local.json
+appsettings.*.local.json
+
 # OS files
 .DS_Store
 Thumbs.db
