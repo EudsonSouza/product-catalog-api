@@ -1,11 +1,8 @@
-using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.Tokens;
 using ProductCatalog.API.Health;
 using ProductCatalog.API.Middleware;
 using ProductCatalog.Data;
@@ -44,7 +41,6 @@ void ConfigureServices(WebApplicationBuilder appBuilder)
     ConfigureDatabase(appBuilder);
     RegisterRepositories(appBuilder.Services);
     RegisterServices(appBuilder.Services);
-    ConfigureJwtAuthentication(appBuilder);
     ConfigureAuthorization(appBuilder.Services);
     ConfigureHealthChecks(appBuilder.Services);
 }
@@ -106,47 +102,9 @@ void ConfigureOpenApi(IServiceCollection services)
     {
         options.AddDocumentTransformer((document, context, cancellationToken) =>
         {
-            document.Info.Description = "Product Catalog API - GET endpoints are public, POST/PUT/DELETE require admin authorization";
-
-            AddJwtSecuritySchemeToSwagger(document);
-            ApplyGlobalSecurityRequirement(document);
-
+            document.Info.Description = "Product Catalog API - GET endpoints are public, POST/PUT/DELETE require admin authorization (Session-based via Google OAuth)";
             return Task.CompletedTask;
         });
-    });
-}
-
-void AddJwtSecuritySchemeToSwagger(Microsoft.OpenApi.Models.OpenApiDocument document)
-{
-    document.Components ??= new Microsoft.OpenApi.Models.OpenApiComponents();
-    document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.Models.OpenApiSecurityScheme>();
-    document.Components.SecuritySchemes.Add("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Enter your JWT token in the text input below."
-    });
-}
-
-void ApplyGlobalSecurityRequirement(Microsoft.OpenApi.Models.OpenApiDocument document)
-{
-    document.SecurityRequirements ??= new List<Microsoft.OpenApi.Models.OpenApiSecurityRequirement>();
-    document.SecurityRequirements.Add(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
     });
 }
 
@@ -200,36 +158,6 @@ void RegisterServices(IServiceCollection services)
     });
 }
 
-void ConfigureJwtAuthentication(WebApplicationBuilder appBuilder)
-{
-    var jwtSecret = appBuilder.Configuration["Jwt:Secret"]
-        ?? throw new InvalidOperationException("JWT Secret is not configured");
-    var jwtIssuer = appBuilder.Configuration["Jwt:Issuer"]
-        ?? throw new InvalidOperationException("JWT Issuer is not configured");
-    var jwtAudience = appBuilder.Configuration["Jwt:Audience"]
-        ?? throw new InvalidOperationException("JWT Audience is not configured");
-
-    appBuilder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-}
-
 void ConfigureAuthorization(IServiceCollection services)
 {
     services.AddAuthorizationBuilder()
@@ -252,10 +180,9 @@ void ConfigureMiddleware(WebApplication application)
     application.UseHttpsRedirection();
     application.UseCors("AllowFrontend");
 
-    // Session authentication middleware (before UseAuthentication)
+    // Session authentication middleware
     application.UseMiddleware<SessionAuthenticationMiddleware>();
 
-    application.UseAuthentication();
     application.UseAuthorization();
 }
 

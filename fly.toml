@@ -35,12 +35,12 @@ primary_region = 'gru'  # São Paulo - same region as Neon (sa-east-1)
   ENABLE_SWAGGER = 'false'
   Session__CookieName = 'product_catalog_session'
   Session__ExpirationHours = '8'
-  Jwt__Issuer = 'ProductCatalogAPI'
-  Jwt__Audience = 'ProductCatalogAPI'
 
 # Secrets must be configured via CLI:
 # flyctl secrets set ConnectionStrings__DefaultConnection="postgres://..." --app product-catalog-api
 # flyctl secrets set Google__ClientId="..." --app product-catalog-api
 # flyctl secrets set Google__ClientSecret="..." --app product-catalog-api
-# flyctl secrets set Jwt__Secret="..." --app product-catalog-api
-# flyctl secrets set AllowedOrigins__0="https://..." --app product-catalog-api
+# flyctl secrets set Frontend__BaseUrl="https://..." --app product-catalog-api
+# flyctl secrets set AdminEmails="admin@example.com,..." --app product-catalog-api
+# flyctl secrets set Cors__AllowedOrigins__0="https://..." --app product-catalog-api
+# flyctl secrets set Cors__AllowVercelPreviews="false" --app product-catalog-api

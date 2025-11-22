@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\ProductCatalog.Data\ProductCatalog.Data.csproj" />
     <ProjectReference Include="..\..\src\ProductCatalog.Domain\ProductCatalog.Domain.csproj" />
     <ProjectReference Include="..\..\src\ProductCatalog.Services\ProductCatalog.Services.csproj" />
+    <ProjectReference Include="..\..\src\ProductCatalog.API\ProductCatalog.API.csproj" />
   </ItemGroup>
 
 </Project>
