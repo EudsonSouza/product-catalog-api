@@ -174,6 +174,7 @@ void RegisterRepositories(IServiceCollection services)
 void RegisterServices(IServiceCollection services)
 {
     services.AddScoped<IProductService, ProductService>();
+    services.AddScoped<IColorService, ColorService>();
     services.AddScoped<IUserService, UserService>();
     services.AddScoped<ISessionService, SessionService>();
     services.AddHttpClient<IGoogleOAuthService, GoogleOAuthService>();
